@@ -1,3 +1,4 @@
-angular-adminui
-===============
-update to angular(1.2.4)- bootstrap3
+adminui-3.0
+===========
+
+adminui-3.0 pages
