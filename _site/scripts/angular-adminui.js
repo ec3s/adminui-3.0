@@ -57,7 +57,11 @@ angular.module('ntd.directives', ['ntd.config']);
       ]
     }, 200, 'linear');
     primaryFieldset.find(':submit').toggle();
-    $('.icon-chevron-down', elem).toggleClass('icon-chevron-up');
+    if ($('.glyphicon', elem).hasClass('glyphicon-chevron-down')) {
+      $('.glyphicon.glyphicon-chevron-down', elem).removeClass('glyphicon-chevron-down').addClass('glyphicon-chevron-up');
+    } else {
+      $('.glyphicon.glyphicon-chevron-up', elem).removeClass('glyphicon-chevron-up').addClass('glyphicon-chevron-down');
+    }
   }
   function toggleFilterAction(e, elem) {
     var et = e.target;
