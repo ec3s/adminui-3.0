@@ -7,7 +7,7 @@
 <h3>Alert</h3>
 <div ng-controller="AlertDemoCtrl">
   <alert ng-repeat="alert in alerts" type="alert.type" close="closeAlert($index)">{{alert.msg}}</alert>
-  <button class='btn btn-default' ng-click="addAlert()">Add Alert</button>
+  <button class="btn btn-default" ng-click="addAlert()">Add Alert</button>
 </div>
 <hr>
 <pre class="prettyprint linenums">
@@ -99,15 +99,15 @@
 <div ng-controller="ButtonsCtrl">
     <h4>Single toggle</h4>
     <pre>{{singleModel}}</pre>
-    <button type="button" class="btn btn-primary" ng-model="singleModel" btn-checkbox btn-checkbox-true="1" btn-checkbox-false="0">
+    <button type="button" class="btn btn-primary" ng-model="singleModel" btn-checkbox="" btn-checkbox-true="1" btn-checkbox-false="0">
         Single Toggle
     </button>
     <h4>Checkbox</h4>
     <pre>{{checkModel}}</pre>
     <div class="btn-group">
-        <button type="button" class="btn btn-primary" ng-model="checkModel.left" btn-checkbox>Left</button>
-        <button type="button" class="btn btn-primary" ng-model="checkModel.middle" btn-checkbox>Middle</button>
-        <button type="button" class="btn btn-primary" ng-model="checkModel.right" btn-checkbox>Right</button>
+        <button type="button" class="btn btn-primary" ng-model="checkModel.left" btn-checkbox="">Left</button>
+        <button type="button" class="btn btn-primary" ng-model="checkModel.middle" btn-checkbox="">Middle</button>
+        <button type="button" class="btn btn-primary" ng-model="checkModel.right" btn-checkbox="">Right</button>
     </div>
     <h4>Radio</h4>
     <pre>{{radioModel}}</pre>
@@ -256,7 +256,7 @@
         pharetra convallis posuere morbi leo urna,
         <a><span tooltip-animation="false" tooltip="I don't fade. :-(">fading</span></a>
         at elementum eu, facilisis sed odio morbi quis commodo odio. In cursus
-        <a><span tooltip-popup-delay='1000' tooltip='appears with delay'>delayed</span></a> turpis massa tincidunt dui
+        <a><span tooltip-popup-delay="1000" tooltip="appears with delay">delayed</span></a> turpis massa tincidunt dui
         ut.
     </p>
     <p>
@@ -266,10 +266,7 @@
         <label>Or use custom triggers, like focus: </label>
         <div class="row">
         <div class="col-sm-7">
-            <input type="text" value="Click me!"
-                   tooltip="See? Now click away..."
-                   tooltip-trigger="focus"
-                   tooltip-placement="right" class="form-control">
+            <input type="text" value="Click me!" tooltip="See? Now click away..." tooltip-trigger="focus" tooltip-placement="right" class="form-control">
         </div>
         </div>
     </div>
@@ -330,9 +327,7 @@
     <button popover-placement="bottom" popover="On the Bottom!" class="btn btn-default">Bottom</button>
     <h4>Triggers</h4>
     <div class="form-group">
-        <input type="text" value="Click me!"
-               popover="I appeared on focus! Click away and I'll vanish..."
-               popover-trigger="focus" class="form-control">
+        <input type="text" value="Click me!" popover="I appeared on focus! Click away and I'll vanish..." popover-trigger="focus" class="form-control">
     </div>
     <button popover="I appeared on mouse enter!" popover-trigger="mouseenter" class="btn btn-default">Mouseenter
     </button>
@@ -395,11 +390,11 @@
 <h3>tab标签</h3>
 <div ng-controller="TabsDemoCtrl">
   Select a tab by setting active binding to true:
-  <br />
+  <br>
   <button class="btn btn-default btn-small" ng-click="tabs[0].active = true">Select second tab</button>
   <button class="btn btn-default btn-small" ng-click="tabs[1].active = true">Select third tab</button>
   <button class="btn btn-default btn-small" ng-click="tabs[1].disabled = ! tabs[1].disabled">Enable / Disable third tab</button>
-  <hr />
+  <hr>
 
   <tabset>
     <tab heading="Static title">Static content</tab>
@@ -414,14 +409,14 @@
     </tab>
   </tabset>
 
-  <hr />
+  <hr>
 
   <tabset vertical="true" type="navType">
     <tab heading="Vertical 1">Vertical content 1</tab>
     <tab heading="Vertical 2">Vertical content 2</tab>
   </tabset>
 
-  <hr />
+  <hr>
 
   <tabset justified="true">
     <tab heading="Justified">Justified content</tab>
@@ -493,17 +488,17 @@
         <pagination direction-links="false" total-items="totalItems" page="currentPage" num-pages="smallnumPages"></pagination>
     </div>
     <button class="btn btn-default" ng-click="setPage(3)">Set current page to: 3</button>
-    <hr />
+    <hr>
     <h4>Pager</h4>
     <pager total-items="totalItems" page="currentPage"></pager>
-    <hr />
+    <hr>
     <h4>Limit the maximimum visible buttons</h4>
     <pre>Page: {{bigCurrentPage}} / {{numPages}}</pre>
     <pagination total-items="bigTotalItems" page="bigCurrentPage" max-size="maxSize" class="pagination-small" boundary-links="true"></pagination>
     <pagination total-items="bigTotalItems" page="bigCurrentPage" max-size="maxSize" class="pagination-small" boundary-links="true" rotate="false" num-pages="numPages"></pagination>
 </div>
 
-<pre class="prettyprint linenums" >
+<pre class="prettyprint linenums">
     &lt;div ng-controller="PaginationDemoCtrl"&gt;
         &lt;h4&gt;Default&lt;/h4&gt;
         &lt;pre&gt;The selected page no: {{currentPage}}&lt;/pre&gt;
