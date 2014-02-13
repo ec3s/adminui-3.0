@@ -383,6 +383,9 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
             $(et).bind('selectstart', function () {
               return false;
             });
+          } else {
+            var url = $(et).attr('href');
+            $('#bs2').attr('href', 'http://ec3s.github.io/angular-adminui/' + url);
           }
         });
       }
