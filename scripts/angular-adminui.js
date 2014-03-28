@@ -50,7 +50,7 @@ angular.module('ntd.directives', ['ntd.config']);
         scope.messages = scope.messages ? scope.messages : [];
         scope.userInfo = ng.extend({
           'username': 'N/A',
-          'avatar': '../images/avatar.jpg',
+          'avatar': 'images/avatar.jpg',
           'logout': function () {
             console.log('logout');
           },
