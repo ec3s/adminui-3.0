@@ -180,71 +180,6 @@ adminuiApp.config([
   }
 ]);
 'use strict';
-var chosenCtrl = function ($scope, $http, $q) {
-  $scope.options = this.getOptions();
-  $scope.optionPromise = angular.bind(this, this.getOptionPromise, $http, $q);
-  $scope.tags = [
-    {
-      'name': 'tag0',
-      'id': 1,
-      'editable': true,
-      'deletable': false
-    },
-    'tag1',
-    'tag2',
-    {
-      'name': 'tag3',
-      'id': 1,
-      'editable': true,
-      'deletable': false
-    }
-  ];
-  $scope.linkages = [{
-      id: 1,
-      name: 'bb',
-      children: [{
-          id: 2,
-          name: 'aa',
-          children: [{
-              id: 3,
-              name: 'vv'
-            }]
-        }]
-    }];
-};
-chosenCtrl.prototype.getOptionPromise = function ($http, $q, search) {
-  var deferred = $q.defer();
-  $http.jsonp('http://api.rottentomatoes.com/api/public/v1.0/movies.json?q=' + search + '&apikey=ju6z9mjyajq2djue3gbvv26t&page_limit=10&page=1' + '&callback=JSON_CALLBACK').success(function (data) {
-    deferred.resolve(data.movies);
-  }).error(function (error) {
-    deferred.reject(error);
-  });
-  return deferred.promise;
-};
-chosenCtrl.prototype.getOptions = function () {
-  return [
-    {
-      id: 1,
-      name: 'CN'
-    },
-    {
-      id: 2,
-      name: 'JP'
-    },
-    {
-      id: 3,
-      name: 'EN'
-    },
-    {
-      id: 4,
-      name: 'AU'
-    },
-    {
-      id: 5,
-      name: 'DE'
-    }
-  ];
-};
 adminuiApp.controller('MainCtrl', [
   '$scope',
   '$window',
@@ -324,6 +259,100 @@ adminuiApp.controller('MainCtrl', [
     $scope.alert = {};
   }
 ]);
+var checkboxGroupCtrl = function ($scope) {
+  $scope.checkboxGroupData = {
+    'name': '\u4ea7\u54c1\u7ba1\u7406',
+    'checkboxGroup': [
+      {
+        'name': '\u67e5\u770b\u4ea7\u54c1',
+        'value': 'read',
+        'checked': true
+      },
+      {
+        'name': '\u7f16\u8f91\u4ea7\u54c1',
+        'value': 'edit'
+      },
+      {
+        'name': '\u6dfb\u52a0\u4ea7\u54c1',
+        'value': 'add',
+        'checked': true
+      },
+      {
+        'name': '\u5220\u9664\u4ea7\u54c1',
+        'value': 'delete'
+      }
+    ]
+  };
+};
+adminuiApp.controller('checkboxGroupCtrl', [
+  '$scope',
+  checkboxGroupCtrl
+]);
+var chosenCtrl = function ($scope, $http, $q) {
+  $scope.options = this.getOptions();
+  $scope.optionPromise = angular.bind(this, this.getOptionPromise, $http, $q);
+  $scope.tags = [
+    {
+      'name': 'tag0',
+      'id': 1,
+      'editable': true,
+      'deletable': false
+    },
+    'tag1',
+    'tag2',
+    {
+      'name': 'tag3',
+      'id': 1,
+      'editable': true,
+      'deletable': false
+    }
+  ];
+  $scope.linkages = [{
+      id: 1,
+      name: 'bb',
+      children: [{
+          id: 2,
+          name: 'aa',
+          children: [{
+              id: 3,
+              name: 'vv'
+            }]
+        }]
+    }];
+};
+chosenCtrl.prototype.getOptionPromise = function ($http, $q, search) {
+  var deferred = $q.defer();
+  $http.jsonp('http://api.rottentomatoes.com/api/public/v1.0/movies.json?q=' + search + '&apikey=ju6z9mjyajq2djue3gbvv26t&page_limit=10&page=1' + '&callback=JSON_CALLBACK').success(function (data) {
+    deferred.resolve(data.movies);
+  }).error(function (error) {
+    deferred.reject(error);
+  });
+  return deferred.promise;
+};
+chosenCtrl.prototype.getOptions = function () {
+  return [
+    {
+      id: 1,
+      name: 'CN'
+    },
+    {
+      id: 2,
+      name: 'JP'
+    },
+    {
+      id: 3,
+      name: 'EN'
+    },
+    {
+      id: 4,
+      name: 'AU'
+    },
+    {
+      id: 5,
+      name: 'DE'
+    }
+  ];
+};
 adminuiApp.controller('TabsDemoCtrl', [
   '$scope',
   function ($scope) {
