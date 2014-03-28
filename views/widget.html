@@ -3,12 +3,26 @@
         Admin UI 组件
     </h1>
 </div>
-
 <h3>Checkbox group</h3>
 <div data-ng-controller="checkboxGroupCtrl">
   <p> 复选分组组件， 添加<code>checkbox-group</code>属性</p>
   <p><code>ng-model</code>为必选属性</p>
-  <div data-checkbox-group="" data-ng-model="checkboxGroupData"></div>
+  <div data-checkbox-group data-ng-model="checkboxGroupData"></div>
+  <pre class="prettyprint linenums">
+  &lt;div data-checkbox-group data-ng-model=&quot;checkboxGroupData&quot;&gt;&lt;/div&gt;
+  </pre>
+  <p>数据结构</p>
+  <pre class="well">
+    {
+      'name': '产品管理',
+      'checkboxGroup': [
+        {'name': '查看产品', 'value': 'read', 'checked': true},
+        {'name': '编辑产品', 'value': 'edit'},
+        {'name': '添加产品', 'value': 'add', 'checked': true},
+        {'name': '删除产品', 'value': 'delete'}
+      ]
+    };
+  </pre>
 </div>
 
 <h3>Toggle swithers</h3>
