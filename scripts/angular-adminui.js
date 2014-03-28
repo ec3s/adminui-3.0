@@ -32,6 +32,176 @@
 'use strict';
 angular.module('ntd.config', []).value('$ntdConfig', {});
 angular.module('ntd.directives', ['ntd.config']);
+(function (ng) {
+  'use strict';
+  var AdminuiFrame = function (adminuiFrameProvider, $rootScope, $location, $timeout) {
+    return {
+      restrict: 'A',
+      templateUrl: 'templates/adminui-frame.html',
+      transclude: true,
+      scope: {
+        userInfo: '=',
+        messages: '='
+      },
+      link: function (scope, elem, attrs) {
+        scope.isSubMenuShow = adminuiFrameProvider.defaultShowSubmenu;
+        scope.isMessageBoxShow = adminuiFrameProvider.showMessageBox;
+        scope.navigation = adminuiFrameProvider.navigation;
+        scope.messages = scope.messages ? scope.messages : [];
+        scope.userInfo = ng.extend({
+          'username': 'N/A',
+          'avatar': '../images/avatar.jpg',
+          'logout': function () {
+            console.log('logout');
+          },
+          'changePwd': function () {
+            console.log('change password');
+          }
+        }, scope.userInfo);
+        init(scope.navigation);
+        $rootScope.$on('$routeChangeStart', function () {
+          selectPath(scope, $location.path());
+        });
+        scope.select = ng.bind(scope, select, $timeout, elem);
+        scope.toggleSubMenu = ng.bind(scope, toggleSubMenu);
+        scope.selectNav = ng.bind(scope, selectNav);
+        scope.selectMenu = ng.bind(scope, selectMenu);
+        scope.isSelected = ng.bind(scope, isSelected);
+        scope.setSideMenu = ng.bind(scope, setSideMenu, elem);
+        scope.logout = ng.bind(scope, logout);
+        scope.changePwd = ng.bind(scope, changePwd);
+        selectPath(scope, $location.path());
+      }
+    };
+  };
+  var logout = function (evt) {
+    evt.preventDefault();
+    this.userInfo.logout();
+  };
+  var changePwd = function (evt) {
+    evt.preventDefault();
+    this.userInfo.changePwd();
+  };
+  var init = function (navigation) {
+    var parentNav = arguments[1] === undefined ? null : arguments[1];
+    var level = arguments[2] === undefined ? 0 : arguments[2];
+    ng.forEach(navigation, function (nav) {
+      nav.parentNav = parentNav;
+      nav.level = level + 1;
+      if (nav.children != null) {
+        init(nav.children, nav, nav.level);
+      }
+    });
+  };
+  var getEndChildren = function (navigation) {
+    var endChildren = arguments[1] ? arguments[1] : [];
+    ng.forEach(navigation, function (nav) {
+      if (nav.children == null) {
+        endChildren.push(nav);
+      } else {
+        getEndChildren(nav.children, endChildren);
+      }
+    });
+    return generateMatch(endChildren);
+  };
+  var generateMatch = function (endChildren) {
+    ng.forEach(endChildren, function (child) {
+      if (ng.isUndefined(child.match) && child.url != null) {
+        child.match = child.url.replace('#', '');
+      }
+    });
+    return endChildren;
+  };
+  var selectPath = function (scope, path) {
+    clearSelected(scope.navigation);
+    var endChildren = getEndChildren(scope.navigation);
+    for (var i = 0; i < endChildren.length; i++) {
+      var regexp = new RegExp('^' + endChildren[i].match + '$', ['i']);
+      if (regexp.test(path)) {
+        scope.select(endChildren[i]);
+        break;
+      }
+    }
+  };
+  var select = function ($timeout, elem, nav) {
+    nav.selected = true;
+    if (nav.level == 2) {
+      this.setSideMenu(nav.children, nav.name);
+    } else if (nav.level == 4) {
+      $timeout(function () {
+        var collapse = elem.find('.side-nav-menu').find('.active>.has-sub-menu').parent('li').find('ul');
+        collapse.show();
+      });
+    }
+    if (nav.parentNav != null) {
+      this.select(nav.parentNav);
+    }
+  };
+  var isSelected = function (item) {
+    return item.selected ? true : false;
+  };
+  var setSideMenu = function (elem, menu, name) {
+    if (menu == null || menu.length == 0) {
+      this.hasSideMenu = false;
+    } else {
+      this.hasSideMenu = true;
+      this.sideMenuName = name;
+      this.menu = menu;
+    }
+  };
+  var toggleSubMenu = function (e) {
+    this.isSubMenuShow = !this.isSubMenuShow;
+  };
+  var clearSelected = function (item) {
+    for (var i = 0; i < item.length; i++) {
+      item[i].selected = false;
+      if (item[i].children != null) {
+        clearSelected(item[i].children);
+      }
+    }
+  };
+  var selectNav = function (nav) {
+    clearSelected(this.navigation);
+    if (nav.url != null) {
+      selectPath(this, nav.url.replace('#', ''));
+    } else {
+      this.select(nav);
+    }
+    this.setSideMenu(nav.children, nav.name);
+  };
+  var selectMenu = function (menu, evt) {
+    if (menu.children != null) {
+      ng.element(evt.target).parent('li').find('ul').toggle();
+    } else {
+      clearSelected(this.menu);
+      if (menu.url != null) {
+        selectPath(this, menu.url.replace('#', ''));
+      } else {
+        this.select(menu);
+      }
+    }
+  };
+  var AdminuiFrameProvider = function () {
+    this.config = {
+      defaultShowSubmenu: false,
+      showMessageBox: false
+    };
+    this.$get = function () {
+      return this.config;
+    };
+    this.setConfig = function (config) {
+      this.config = ng.extend(this.config, config);
+    };
+  };
+  ng.module('ntd.directives').provider('adminuiFrame', [AdminuiFrameProvider]);
+  ng.module('ntd.directives').directive('adminuiFrame', [
+    'adminuiFrame',
+    '$rootScope',
+    '$location',
+    '$timeout',
+    AdminuiFrame
+  ]);
+}(angular));
 (function () {
   'use strict';
   var fieldsets, showFilterBtn, primaryFieldset, secondaryFieldset, template = '<div class="advance-search-filter">' + '<div ng-transclude></div>' + '<div class="more">' + '<a data-class="J_toggleShowFilterBtn">' + '<i class="glyphicon glyphicon-chevron-down"></i>' + '</a>' + '</div>' + '</div>';
@@ -526,9 +696,8 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
     var parentItem = getItem(parent);
     var currItem = getItem($scope.ngModel);
     var level = parentItem ? parentItem.level + 1 : 0;
-    var list = $('<ul></ul>').css('margin-left', level * 33 + '%').attr('cl-id', parent);
-    for (var i in $tree) {
-      var item = $tree[i];
+    var list = $('<ul></ul>').css('margin-left', level * 30 + '%').attr('cl-id', parent);
+    angular.forEach($tree, function (item) {
       if (item.parent == parent) {
         var li = $('<li cl-value="' + item.value + '">' + item.text + '</li>').click(onItemClick);
         if (item.children().length > 0) {
@@ -542,7 +711,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
         }
         list.append(li);
       }
-    }
+    });
     return list;
   }
   function onItemClick(e) {
@@ -596,8 +765,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
   }
   var TreeData = function (data, options) {
     var ret = [];
-    for (var i in data) {
-      var item = data[i];
+    angular.forEach(data, function (item) {
       var path = item[options.path].split('/').slice(1, -1);
       ret.push({
         value: item[options.value],
@@ -613,7 +781,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
           return son;
         }
       });
-    }
+    });
     return ret;
   };
   function cascadeListDirective($parse) {
@@ -626,7 +794,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
       },
       link: function (scope, element, attrs) {
         $scope = scope;
-        $element = $('<div class="cascade-list-inner"></div>').css('width', attrs.width || '400px').css('height', attrs.height || '120px');
+        $element = $('<div class="cascade-list-inner"></div>').css('width', attrs.width || '100%').css('height', attrs.height || '220px');
         element.append($element).addClass('cascade-list');
         var options = {
             name: attrs.name,
@@ -852,7 +1020,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
   var Linkage = function ($parse) {
     return {
       restrict: 'AC',
-      template: '<span><span' + ' data-ng-repeat="linkage in linkages">' + ' <select class="col-lg-3" data-ntd-chosen' + ' data-placeholder="\u8bf7\u9009\u62e9"' + ' data-disable-search-threshold="10"' + ' data-ng-change="change($index)"' + ' data-ng-model="values[$index]"' + ' data-allow-single-deselect="true"' + ' data-ng-options="option as option.name' + ' for option in linkage">' + ' <option value=""></option>' + '</select></span></span>',
+      template: '<span><span' + ' data-ng-repeat="linkage in linkages">' + ' <select class="col-sm-3" data-ntd-chosen' + ' data-placeholder="\u8bf7\u9009\u62e9"' + ' data-disable-search-threshold="10"' + ' data-ng-change="change($index)"' + ' data-ng-model="values[$index]"' + ' data-allow-single-deselect="true"' + ' data-ng-options="option as option.name' + ' for option in linkage">' + ' <option value=""></option>' + '</select></span></span>',
       scope: {
         source: '=',
         ngModel: '='
@@ -945,7 +1113,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
         placeholder: '@',
         id: '@'
       },
-      template: '<div class="tag-input-container">' + '<ul data-ng-class="{true: \'focus\'}[isFocus]">' + '<li class="tag" data-ng-repeat="tag in tags">' + '<span>{{tag}}</span>' + '<i data-ng-click="remove($index)" class="ico-remove"></i>' + '</li>' + '<li class="input-li">' + '<input id="{{id}}" class="form-control input-sm" data-ng-model="tagInput"' + ' placeholder="{{placeholder}}" type="text" autocomplete="false" />' + '</li>' + '</ul>' + '</div>',
+      template: '<div class="tag-input-container">' + '<ul data-ng-class="{true: \'focus\'}[isFocus]">' + '<li class="tag" data-ng-repeat="tag in tags">' + '<span>{{tag.name}}</span>' + '<i data-ng-show="tagsAttribute[$index].editable"' + ' class="glyphicon glyphicon-pencil"' + ' data-ng-click="editTag($index, $event)"></i>' + ' <i data-ng-show="tagsAttribute[$index].deletable"' + ' data-ng-click="removeTag($index)"' + ' class="glyphicon glyphicon-remove"></i></li><li class="input-li">' + '<input id="{{id}}" class="form-control input-sm"' + ' data-ng-model="tagInput"' + ' placeholder="{{placeholder}}" type="text" autocomplete="false" />' + '</li>' + '</ul>' + '</div>',
       link: function (scope, elem, attrs) {
         var placeholder = attrs.placeholder;
         var caseSensitive = attrs.caseSensitive || false;
@@ -953,26 +1121,114 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
         var unique = scope.$eval(attrs.unique) || true;
         var uniqueTags = [];
         var oldInput;
+        var tagsAttribute = scope.tagsAttribute = [];
+        var getPopHtml = function (index) {
+          return '<div id="pop_' + index + '" >' + '<p><input id="pop_inp_' + index + '"' + ' type="text" class="form-control input-sm"/></p>' + ' <button type="button"' + ' class="btn btn-primary btn-sm">' + ' \u786e\u5b9a</button>\n<button type="button"' + ' class="btn btn-default btn-sm">' + ' \u53d6\u6d88</button>' + '</div>';
+        };
+        var cancelEdit = function (index) {
+          return function (e) {
+            angular.element(elem.find('li')[index]).popover('destroy');
+            elem.find('input').focus();
+          };
+        };
+        var useEdit = function (index) {
+          return function (e) {
+            var tagName = elem.find('#pop_inp_' + index).val();
+            var findIndex = indexOf(scope.tags, { 'name': tagName });
+            if (!unique || findIndex === -1) {
+              scope.tags[index].name = tagName;
+              scope.$apply();
+            } else {
+              angular.element(elem.find('li')[findIndex]).fadeTo('fast', 0.2).fadeTo('fast', 1);
+            }
+            angular.element(elem.find('li')[index]).popover('destroy');
+            elem.find('input').focus();
+          };
+        };
+        var closeAllPop = function () {
+          elem.find('li').each(function (index, item) {
+            angular.element(item).popover('destroy');
+          });
+        };
+        var isDeletable = function (tag) {
+          return angular.isUndefined(tag.deletable) || tag.deletable;
+        };
+        var isEditable = function (tag) {
+          return !angular.isUndefined(tag.editable) && tag.editable;
+        };
+        var setTagAttribute = function (tag, index) {
+          if (!angular.isObject(tagsAttribute[index])) {
+            tagsAttribute[index] = {
+              'deletable': isDeletable(tag) ? true : false,
+              'editable': isEditable(tag) ? true : false
+            };
+          }
+          delete tag.deletable;
+          delete tag.editable;
+        };
+        var unifyItemInTags = function (tags) {
+          angular.forEach(tags, function (tag, index) {
+            if (angular.isString(tag)) {
+              tags[index] = { 'name': tag };
+            }
+            setTagAttribute(tags[index], index);
+          });
+        };
+        unifyItemInTags(scope.tags);
         var indexOf = function (tags, tag) {
           if (!caseSensitive) {
-            tag = tag.toLowerCase();
-            tags = tags.join(',').toLowerCase().split(',');
+            var tagName = tag.name.toLowerCase();
+            var allNames = tags.map(function (tag) {
+                return tag.name.toLowerCase();
+              });
           }
-          return tags.indexOf(tag);
+          return allNames.indexOf(tagName);
         };
         if (!angular.isArray(scope.tags)) {
           scope.tags = [];
         }
         if (unique) {
-          angular.forEach(scope.tags, function (item) {
-            if (indexOf(uniqueTags, item) === -1) {
-              uniqueTags.push(item);
+          angular.forEach(scope.tags, function (tag) {
+            if (indexOf(uniqueTags, tag) === -1) {
+              uniqueTags.push(tag);
             }
           });
           scope.tags = uniqueTags;
         }
-        scope.remove = function (index) {
+        scope.removeTag = function (index) {
+          closeAllPop();
           scope.tags.splice(index, 1);
+          tagsAttribute.splice(index, 1);
+        };
+        scope.editTag = function (index, event) {
+          event.stopPropagation();
+          closeAllPop();
+          angular.element(elem.find('li')[index]).popover({
+            content: getPopHtml(index),
+            html: true,
+            placement: 'top',
+            trigger: 'manual',
+            title: '\u4fee\u6539'
+          });
+          angular.element(elem.find('li')[index]).popover('show');
+          elem.find('#pop_inp_' + index).focus().bind('keypress', function (e) {
+            if (e.keyCode == 13) {
+              e.preventDefault();
+              useEdit(index)(e);
+            }
+          }).val(scope.tags[index].name);
+          elem.find('#pop_' + index).find('.btn-primary').bind('click', useEdit(index));
+          elem.find('#pop_' + index).find('.btn-default').bind('click', cancelEdit(index));
+          elem.find('.popover').bind('click', function (e) {
+            e.stopPropagation();
+          });
+        };
+        var addTag = function (tag) {
+          scope.tags.push(tag);
+          tagsAttribute.push({
+            'deletable': true,
+            'editable': false
+          });
         };
         elem.find('input').bind('focus', function () {
           scope.isFocus = true;
@@ -982,17 +1238,21 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
           scope.isFocus = false;
           var oldValue = $(this).val();
           if (oldValue) {
-            var index = indexOf(scope.tags, oldValue);
+            var tag = { 'name': oldValue };
+            var index = indexOf(scope.tags, tag);
             if (!unique || index === -1) {
-              scope.tags.push(oldValue);
+              addTag(tag);
             } else {
               angular.element(elem.find('li')[index]).fadeTo('fast', 0.2).fadeTo('fast', 1);
             }
           }
           scope.tagInput = '';
-          scope.$apply();
+          if (scope.$root.$$phase != '$apply' && scope.$root.$$phase != '$digest') {
+            scope.$apply();
+          }
         });
-        elem.bind('click', function () {
+        elem.bind('click', function (e) {
+          closeAllPop();
           elem.find('input').focus();
         });
         elem.find('input').bind('keyup', function (e) {
@@ -1000,12 +1260,18 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
             oldInput = scope.tagInput;
           } else if (e.keyCode == 8 && scope.tags.length > 0) {
             if (oldInput == scope.tagInput) {
-              scope.tags.pop();
-              scope.$apply();
+              var tagAttribute = tagsAttribute[scope.tags.length - 1];
+              if (tagAttribute.deletable === true) {
+                scope.removeTag(scope.tags.length - 1);
+                scope.$apply();
+              } else {
+                angular.element(elem.find('li')[scope.tags.length - 1]).stop().fadeTo('fast', 0.2).fadeTo('fast', 1);
+              }
             }
           }
         });
         scope.$watch('tags', function (newValue, oldValue) {
+          unifyItemInTags(newValue);
           if (!allwaysPlaceholder) {
             if (angular.isArray(newValue) && newValue.length > 0) {
               elem.find('input').attr('placeholder', '');
@@ -1019,9 +1285,10 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
             var lastChar = newValue.substr(-1, 1);
             if (lastChar == ';' || lastChar == '\uff1b') {
               if (oldValue) {
-                var index = indexOf(scope.tags, oldValue);
+                var tag = { 'name': oldValue };
+                var index = indexOf(scope.tags, tag);
                 if (!unique || index === -1) {
-                  scope.tags.push(oldValue);
+                  addTag(tag);
                 } else {
                   angular.element(elem.find('li')[index]).fadeTo('fast', 0.2).fadeTo('fast', 1);
                 }
@@ -1100,6 +1367,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
 (function () {
   'use strict';
   function build_msg(type, message) {
+    type = type == 'error' ? 'danger' : type;
     var html = '<div class="alert alert-' + type + '">' + message + '<button type="button" class="close">\xd7</button>' + '</div>';
     return html;
   }
@@ -1155,7 +1423,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
         name: '@',
         ngModel: '=',
         ngChange: '&',
-        ngClick: '&'
+        click: '&'
       },
       template: '<label class="checkbox toggle">' + '<input id="{{id}}" name="{{name}}"' + ' type="checkbox" ng-model="checked">' + '<p>' + '<span>{{ngTrueTitle}}</span>' + '<span>{{ngFalseTitle}}</span>' + '</p>' + '<a class="btn slide-button"></a>' + '</label>',
       link: function (scope, element, attrs) {
@@ -1170,7 +1438,7 @@ angular.module('ntd.directives').directive('nanoScrollbar', [
               target: element,
               type: 'click'
             };
-            scope.ngClick(eventModel);
+            scope.click(eventModel);
           }
         });
         scope.$watch('checked', function (value, oldValue) {

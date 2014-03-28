@@ -14,16 +14,16 @@
     <code>ng-true-value</code>, 
     <code>ng-false-value</code>, 
     <code>ng-model</code>, 
-    <code>ng-click</code>, 
+    <code>data-click</code>, 
     <code>ng-change</code>, 
     <code>ng-disabled</code>, 
     <code>class</code>
     为可配置属性
 </p>
 <p ng-controller="switcherCtrl">
-    <span toggle-switcher="" id="checkboxid" name="checkboxname" ng-true-title="开启状态" ng-false-title="关闭状态" ng-true-value="open" ng-false-value="close" ng-model="opened" ng-click="click($event)" ng-change="change($event)">
+    <span toggle-switcher="" id="checkboxid" name="checkboxname" ng-true-title="开启状态" ng-false-title="关闭状态" ng-true-value="open" ng-false-value="close" ng-model="opened" data-click="click($event)" ng-change="change($event)">
     </span>
-    <input type="button" class="btn btn-default" ng-click="do()" value="switcher">
+    <input type="button" class="btn btn-sm btn-default" ng-click="do()" value="switcher">
     <span>{{opened}}</span>
 </p>
 <pre class="prettyprint linenums">
@@ -35,7 +35,7 @@
     ng-true-value=&quot;open&quot;
     ng-false-value=&quot;close&quot;
     ng-model=&quot;selected&quot;
-    ng-click=&quot;click($event)&quot;
+    data-click=&quot;click($event)&quot;
     ng-change=&quot;change($event)&quot;&gt;
 &lt;/span&gt;
 </pre>
@@ -58,24 +58,23 @@
 &lt;/span&gt;
 </pre>
 <h3>Flash alert</h3>
-<p>在<code>ngView</code>之外放置 <code>flashAlert</code>, 否则页面跳转时消息显示不出来</p>
 <div ng-controller="flashMessageCtrl">
-    <p>
-        <button class="btn btn-default btn-primary" ng-click="sendMsg()">flash messge</button>
-        点击其它页面将会看到发出去的消息
-    </p>
+	<p>
+		<button class="btn btn-default btn-info" ng-click="sendMsg('info type message.', 'info')">info flash message</button>
+		<button class="btn btn-default btn-danger" ng-click="sendMsg('error type message.', 'error')">error flash message</button>
+		<button class="btn btn-default btn-success" ng-click="sendMsg('success type message.', 'success')">success flash message</button>
+	</p>
+	<p>
+		<button class="btn btn-default btn-primary" ng-click="sendMsg('message from pre page.', 'info', true)">flash messge when route changed</button>
+		点击其它页面将会看到发出去的消息
+	</p>
 </div>
 <pre class="prettyprint linenums">
-    &lt;button class=&quot;btn btn-default btn-info&quot; ng-click=&quot;sendMsg()&quot;&gt;flash messge&lt;/button&gt;
+	&lt;button class=&quot;btn btn-default btn-info&quot; ng-click=&quot;sendMsg(&#39;message from pre page.&#39;, '#39;info'#39;, true)&quot;&gt;flash messge when route changed&lt;/button&gt;
 </pre>
 <pre class="well">
-  var queue = [
-    {state: 'warning', info: 'warn message'},
-    {state: 'danger', info: 'error message'}
-  ];
-
-  $scope.sendMsg = function(){
-    flashMessage.notify(queue);
+  $scope.sendMsg = function(msg, level, showOnNextPage){
+	flash.notify({state: 'warning', info: 'warn message', showOnNextPage});
   }
 </pre>
 <h3>Field error</h3>
@@ -110,32 +109,32 @@
     <h4>Single</h4>
     <p>已选中：{{lang}}</p>
     <p>
-        <select data-ng-model="lang" class="ntd-chosen col-lg-3" data-placeholder="请选择" data-ng-options="option.id as option.name for option in options">
+        <select data-ng-model="lang" class="ntd-chosen col-sm-3" data-placeholder="请选择" data-ng-options="option.id as option.name for option in options">
         </select>
         single的chosen
     </p>
     <pre class="prettyprint linenums">
         &lt;select data-ng-model=&quot;lang&quot; 
-            class=&quot;ntd-chosen col-lg-3&quot;
+            class=&quot;ntd-chosen col-sm-3&quot;
             data-placeholder=&quot;&#35831;&#36873;&#25321;&quot;
             data-ng-options=&quot;option.id as option.name for option in options&quot;&gt;
         &lt;/select&gt;
     </pre>
     <p>
-        <select data-ng-model="lang" data-ntd-chosen="" class="col-lg-3" data-disable-search-threshold="10" data-ng-options="option.id as option.name for option in options">
+        <select data-ng-model="lang" data-ntd-chosen="" class="col-sm-3" data-disable-search-threshold="10" data-ng-options="option.id as option.name for option in options">
         </select>
         single的chosen, 大于10条时显示搜索
     </p>
     <pre class="prettyprint linenums">
         &lt;select data-ng-model=&quot;lang&quot; 
-            class=&quot;col-lg-3&quot;
+            class=&quot;col-sm-3&quot;
             data-ntd-chosen
             data-disable-search-threshold=&quot;10&quot;
             data-ng-options=&quot;option.id as option.name for option in options&quot;&gt;
         &lt;/select&gt;
     </pre>
     <p>
-        <select data-ng-model="lang" data-ntd-chosen="" class="col-lg-3" data-allow-single-deselect="true" data-disable-search-threshold="10" data-ng-options="option.id as option.name for option in options">
+        <select data-ng-model="lang" data-ntd-chosen="" class="col-sm-3" data-allow-single-deselect="true" data-disable-search-threshold="10" data-ng-options="option.id as option.name for option in options">
             <option value=""></option>
         </select>
         single的chosen, 需要可以取消选择时, 需要有一个值和内容都为空的<code>option</code>
@@ -143,7 +142,7 @@
     <pre class="prettyprint linenums">
         &lt;select data-ng-model=&quot;lang&quot; 
             data-ntd-chosen
-            class=&quot;col-lg-3&quot;
+            class=&quot;col-sm-3&quot;
             data-allow-single-deselect=&quot;true&quot;
             data-disable-search-threshold=&quot;10&quot;
             data-ng-options=&quot;option.id as option.name for option in options&quot;&gt;
@@ -160,13 +159,13 @@
     <h4>AutoComplete</h4>
     <p>已选中：{{auto}}</p>
     <p>
-        <select data-ng-model="auto" data-ntd-chosen="" class="col-lg-3" data-on-search-promise="optionPromise($search)" data-ng-options="movie.id as movie.title for movie in movies">
+        <select data-ng-model="auto" data-ntd-chosen="" class="col-sm-3" data-on-search-promise="optionPromise($search)" data-ng-options="movie.id as movie.title for movie in movies">
         </select>
     </p>
     <pre class="prettyprint linenums">
         &lt;select data-ng-model=&quot;auto&quot; 
             data-ntd-chosen
-            class=&quot;col-lg-3&quot;
+            class=&quot;col-sm-3&quot;
             data-on-search-promise=&quot;optionPromise($search)&quot;
             data-ng-options=&quot;movie.id as movie.title for movie in movies&quot;&gt;
         &lt;/select&gt;
@@ -176,19 +175,20 @@
     <p>已选中：{{multipleLang}}</p>
     <p>这是multiple的chosen</p>
     <p>
-        <select data-ng-model="multipleLang" data-ntd-chosen="" class="col-lg-3" data-placeholder="选点东西吧" multiple="multiple" data-ng-options="option.id as option.name for option in options">
+        <select data-ng-model="multipleLang" data-ntd-chosen="" class="col-sm-3" data-placeholder="选点东西吧" multiple="multiple" data-ng-options="option.id as option.name for option in options">
         </select>
     </p>
     <pre class="prettyprint linenums">
         &lt;select data-ng-model=&quot;multipleLang&quot; 
             data-ntd-chosen
-            class=&quot;col-lg-3&quot;
+            class=&quot;col-sm-3&quot;
             data-placeholder=&quot;&#36873;&#28857;&#19996;&#35199;&#21543;&quot;
             multiple
             data-ng-options=&quot;option.id as option.name for option in options&quot;&gt;
         &lt;/select&gt;
     </pre>
 
+    <a name="taginput"></a>
     <h3>Tag Input</h3>
     <ul>
         <li><p>分号为分隔符</p></li>
@@ -396,7 +396,7 @@
                 <option value="5">5</option>
             </select>
         </div>        
-        <button type="submit" class="btn btn-default btn-primary">提交</button>
+        <button type="submit" class="btn btn-sm btn-default btn-primary">提交</button>
     </fieldset>
 </form>
 <pre class="prettyprint linenums">
@@ -414,8 +414,11 @@
 <h3>Cascade list</h3>
 <p>为<code>div</code>容器添加<code>cascade-list</code></p>
 <div ng-controller="cascadeListCtrl" style="margin-bottom:15px">
-    <div class="cascade-list" data="dptList" ng-model="dpt.parentCode" name="parentCode" parent="parentCode" text="dptName" path="dptPath" value="dptCode" width="500px" height="150px">
-    </div>
+  <div class="form-group">
+    <input type="text" value="" class="form-control" ng-model="dpt.parentCode">
+  </div>
+  <div class="cascade-list" data="dptList" ng-model="dpt.parentCode" name="parentCode" parent="parentCode" text="dptName" path="dptPath" value="dptCode" height="110px">
+  </div>
 </div>
 <pre class="prettyprint linenums">
     &lt;div class=&quot;cascade-list&quot; 

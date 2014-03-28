@@ -6,10 +6,137 @@ var adminuiApp = angular.module('adminuiApp', [
     'ui.bootstrap',
     'bootstrapPrettify'
   ]);
+adminuiApp.run([
+  '$rootScope',
+  function ($rootScope) {
+    $rootScope.userInfo = {};
+  }
+]);
+angular.module('ntd.directives').config([
+  'adminuiFrameProvider',
+  function (adminuiFrameProvider) {
+    adminuiFrameProvider.setConfig({
+      defaultShowSubmenu: true,
+      showMessageBox: true,
+      navigation: [
+        {
+          'name': 'AdminUI',
+          'url': null,
+          'children': [
+            {
+              'name': '\u7528\u6237\u9762\u677f',
+              'url': '#/',
+              'children': [
+                {
+                  'name': '\u7528\u6237\u9762\u677f',
+                  'url': '#/',
+                  'children': null
+                },
+                {
+                  'name': '\u5b50\u83dc\u5355',
+                  'url': null,
+                  'children': [
+                    {
+                      'name': '\u5206\u7c7b\u4e00',
+                      'url': '#/sub/test',
+                      'children': null
+                    },
+                    {
+                      'name': '\u5206\u7c7b\u4e8c',
+                      'url': '#/sub/test2',
+                      'children': null
+                    },
+                    {
+                      'name': '\u5206\u7c7b\u4e09',
+                      'url': '#/sub/test3',
+                      'children': null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              'name': '\u7ec4\u4ef6\u6837\u5f0f',
+              'url': '#/base-css',
+              'children': [
+                {
+                  'name': '\u57fa\u672c\u6837\u5f0f',
+                  'url': '#/base-css',
+                  'children': null
+                },
+                {
+                  'name': '\u8868\u683c\u6837\u5f0f',
+                  'url': '#/table',
+                  'children': null
+                },
+                {
+                  'name': '\u8868\u5355\u6837\u5f0f',
+                  'url': '#/form',
+                  'children': null
+                }
+              ]
+            },
+            {
+              'name': 'UI\u7ec4\u4ef6',
+              'url': '#/widget',
+              'children': [
+                {
+                  'name': 'Admin UI\u7ec4\u4ef6',
+                  'url': '#/widget',
+                  'children': null
+                },
+                {
+                  'name': 'Bootstrap\u7ec4\u4ef6',
+                  'url': '#/bootstrap-ui-widget',
+                  'children': null
+                }
+              ]
+            },
+            {
+              'name': '\u5176\u4ed6\u9875\u9762',
+              'url': '#/login',
+              'children': [
+                {
+                  'name': '\u767b\u5f55\u9875\u9762',
+                  'url': '#/login',
+                  'children': null
+                },
+                {
+                  'name': '404\u9875\u9762',
+                  'url': '#/404',
+                  'children': null
+                }
+              ]
+            },
+            {
+              'name': '\u5347\u7ea7\u6307\u5357',
+              'url': '#/update-guide',
+              'children': null
+            }
+          ]
+        },
+        {
+          'name': '\u8ba2\u5355&\u4ea7\u54c1\u7ba1\u7406\u7cfb\u7edf',
+          'url': 'http://product.staging.ec3s.com',
+          'children': null
+        },
+        {
+          'name': '\u4ed3\u50a8\u7ba1\u7406\u7cfb\u7edf',
+          'url': 'http://wms.staging.ec3s.com',
+          'children': null
+        },
+        {
+          'name': ' \u8d22\u52a1\u7ba1\u7406\u7cfb\u7edf',
+          'url': 'http://fms.staging.ec3s.com',
+          'children': null
+        }
+      ]
+    });
+  }
+]);
 adminuiApp.config([
   '$routeProvider',
-  '$locationProvider',
-  function ($routeProvider, $locationProvider) {
+  function ($routeProvider) {
     $routeProvider.when('/', {
       templateUrl: 'views/main.html',
       controller: 'MainCtrl'
@@ -46,7 +173,7 @@ adminuiApp.config([
     }).when('/test', {
       templateUrl: 'views/test.html',
       controller: 'MainCtrl'
-    }).when('/update_guide', {
+    }).when('/update-guide', {
       templateUrl: 'views/update_guide.html',
       controller: 'MainCtrl'
     }).otherwise({ redirectTo: '/' });
@@ -56,6 +183,22 @@ adminuiApp.config([
 var chosenCtrl = function ($scope, $http, $q) {
   $scope.options = this.getOptions();
   $scope.optionPromise = angular.bind(this, this.getOptionPromise, $http, $q);
+  $scope.tags = [
+    {
+      'name': 'tag0',
+      'id': 1,
+      'editable': true,
+      'deletable': false
+    },
+    'tag1',
+    'tag2',
+    {
+      'name': 'tag3',
+      'id': 1,
+      'editable': true,
+      'deletable': false
+    }
+  ];
   $scope.linkages = [{
       id: 1,
       name: 'bb',
@@ -776,24 +919,23 @@ adminuiApp.controller('TabsDemoCtrl', [
 ]).controller('flashMessageCtrl', [
   '$scope',
   '$timeout',
-  'flashMessage',
-  function ($scope, $timeout, flashMessage) {
-    var queue = [
-        {
-          state: 'warning',
-          info: 'warn message'
-        },
-        {
-          state: 'danger',
-          info: 'error message'
-        }
-      ];
-    $scope.sendMsg = function () {
-      flashMessage.notify(queue);
+  'flash',
+  function ($scope, $timeout, flash) {
+    $scope.sendMsg = function (msg, level) {
+      if (arguments[2] != undefined) {
+        flash.notify({
+          state: level,
+          info: msg
+        }, arguments[2]);
+      } else {
+        flash.notify({
+          state: level,
+          info: msg
+        });
+      }
     };
   }
 ]);
-;
 var ModalDemoCtrl = function ($scope, $modal, $log) {
   var t = '<div class="modal-header">' + '<h3>' + 'I\'m a modal!' + '</h3>' + '</div>' + '<div class="modal-body">' + '<ul>' + '<li ng-repeat="item in items">' + '<a ng-click="selected.item = item">' + '{{ item }}' + '</a>' + '</li>' + '</ul>' + 'Selected:' + '<b>' + '{{ selected.item }}' + '</b>' + '</div>' + '<div class="modal-footer">' + '<button class="btn btn-primary" ng-click="ok()">' + 'OK' + '</button>' + '<button class="btn btn-warning" ng-click="cancel()">' + 'Cancel' + '</button>' + '</div>';
   $scope.items = [
