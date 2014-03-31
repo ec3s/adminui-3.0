@@ -288,6 +288,18 @@ adminuiApp.controller('checkboxGroupCtrl', [
   '$scope',
   checkboxGroupCtrl
 ]);
+var paginationCtrl = function ($scope, $route) {
+  var page = $route.current.params['page'];
+  $scope.pageInfo = {
+    'page': page ? page : 1,
+    'total': 10
+  };
+};
+adminuiApp.controller('paginationCtrl', [
+  '$scope',
+  '$route',
+  paginationCtrl
+]);
 var chosenCtrl = function ($scope, $http, $q) {
   $scope.options = this.getOptions();
   $scope.optionPromise = angular.bind(this, this.getOptionPromise, $http, $q);
