@@ -12,6 +12,7 @@ adminuiApp.run([
     $rootScope.userInfo = {};
   }
 ]);
+/* config adminui frame */
 angular.module('ntd.directives').config([
   'adminuiFrameProvider',
   function (adminuiFrameProvider) {
@@ -176,7 +177,7 @@ adminuiApp.config([
     }).when('/update-guide', {
       templateUrl: 'views/update_guide.html',
       controller: 'MainCtrl'
-    }).otherwise({ redirectTo: '/' });
+    }).otherwise({ redirectTo: '/' });  //$locationProvider.html5Mode(true);
   }
 ]);
 'use strict';
@@ -259,6 +260,7 @@ adminuiApp.controller('MainCtrl', [
     $scope.alert = {};
   }
 ]);
+/* for checkbox group */
 var checkboxGroupCtrl = function ($scope) {
   $scope.checkboxGroupData = {
     'name': '\u4ea7\u54c1\u7ba1\u7406',
@@ -292,6 +294,7 @@ adminuiApp.controller('checkboxGroupCtrl', [
   '$scope',
   checkboxGroupCtrl
 ]);
+/* for pagination */
 var paginationCtrl = function ($scope, $route) {
   var page = $route.current.params['page'];
   $scope.pageInfo = {
@@ -304,6 +307,7 @@ adminuiApp.controller('paginationCtrl', [
   '$route',
   paginationCtrl
 ]);
+/* for chosen */
 var chosenCtrl = function ($scope, $http, $q) {
   $scope.options = this.getOptions();
   $scope.optionPromise = angular.bind(this, this.getOptionPromise, $http, $q);
