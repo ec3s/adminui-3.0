@@ -283,6 +283,10 @@ var checkboxGroupCtrl = function ($scope) {
       }
     ]
   };
+  $scope.emptyCheckboxGroupData = {
+    'name': '\u7a7a\u5206\u7ec4',
+    'checkboxGroup': []
+  };
 };
 adminuiApp.controller('checkboxGroupCtrl', [
   '$scope',
