@@ -733,6 +733,7 @@ adminuiApp.controller("TabsDemoCtrl", [ "$scope", function($scope) {
         if (evt.type == "SWITCHER_CLICK") {
             evt.switched(function(value, oldValue) {
                 console.log("switcher switch done");
+                $scope.switch = oldValue;
             });
             console.log(evt);
         }
