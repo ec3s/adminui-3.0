@@ -15,7 +15,8 @@ Switcher 支持 <code>ng-change</code>，<code>ng-click</code>事件，事件函
 <p>在使用<code>ng-click</code>事件时注意判断事件的<code>type</code>来区分angular原本的点击事件。</p>
 <p>在使用<code>ng-click</code>事件时，<code>data-ng-model</code>并没有即刻变化，需要使用 <code>$event</code> 中的 <code>switched</code> 回调函数去判断 Switcher 是否已经切换完毕。</p>
 <div class="switch" ng-controller="switcherCtrl">
-  <div class="switcher-sm switcher-success" data-adminui-switcher="" data-ng-model="switch" data-on-label="<i class='glyphicon glyphicon-ok'></i>" data-off-label="<i class='glyphicon glyphicon-remove'></i>"></div>
+  <div class="switcher-sm switcher-success" data-adminui-switcher="" data-ng-model="switch">
+  </div>
   <div class="switcher-sm" data-adminui-switcher="" data-ng-model="switch" data-on-label="启用" data-off-label="禁用"></div>
   <div class="switcher-sm switcher-info" data-adminui-switcher="" data-ng-model="switch" data-on-label="on" data-off-label="off"></div>
   <div class="switcher-sm switcher-warning" data-adminui-switcher="" data-ng-change="change($event)" data-ng-model="switch" data-on-label="on" data-off-label="off"></div>
