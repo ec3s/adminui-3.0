@@ -5178,7 +5178,7 @@
         offsetParent: function() {
             return this.map(function() {
                 var offsetParent = this.offsetParent || docElem;
-                while (offsetParent && (!jQuery.nodeName(offsetParent, "html") && jQuery.css(offsetParent, "position") === "static")) {
+                while (offsetParent && !jQuery.nodeName(offsetParent, "html") && jQuery.css(offsetParent, "position") === "static") {
                     offsetParent = offsetParent.offsetParent;
                 }
                 return offsetParent || docElem;
@@ -5279,7 +5279,7 @@
                 }
                 return match;
             });
-            message = message + "\nhttp://errors.angularjs.org/1.2.16/" + (module ? module + "/" : "") + code;
+            message = message + "\nhttp://errors.angularjs.org/1.2.15-build.2399+sha.ca4ddfa/" + (module ? module + "/" : "") + code;
             for (i = 2; i < arguments.length; i++) {
                 message = message + (i == 2 ? "?" : "&") + "p" + (i - 2) + "=" + encodeURIComponent(stringify(arguments[i]));
             }
@@ -5459,9 +5459,6 @@
     }
     function isFile(obj) {
         return toString.call(obj) === "[object File]";
-    }
-    function isBlob(obj) {
-        return toString.call(obj) === "[object Blob]";
     }
     function isBoolean(value) {
         return typeof value === "boolean";
@@ -5935,11 +5932,11 @@
         });
     }
     var version = {
-        full: "1.2.16",
+        full: "1.2.15-build.2399+sha.ca4ddfa",
         major: 1,
         minor: 2,
-        dot: 16,
-        codeName: "badger-enumeration"
+        dot: 15,
+        codeName: "snapshot"
     };
     function publishExternalAPI(angular) {
         extend(angular, {
@@ -6102,54 +6099,6 @@
             return originalJqFn.apply(this, arguments);
         }
     }
-    var SINGLE_TAG_REGEXP = /^<(\w+)\s*\/?>(?:<\/\1>|)$/;
-    var HTML_REGEXP = /<|&#?\w+;/;
-    var TAG_NAME_REGEXP = /<([\w:]+)/;
-    var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/gi;
-    var wrapMap = {
-        option: [ 1, '<select multiple="multiple">', "</select>" ],
-        thead: [ 1, "<table>", "</table>" ],
-        col: [ 2, "<table><colgroup>", "</colgroup></table>" ],
-        tr: [ 2, "<table><tbody>", "</tbody></table>" ],
-        td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
-        _default: [ 0, "", "" ]
-    };
-    wrapMap.optgroup = wrapMap.option;
-    wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead;
-    wrapMap.th = wrapMap.td;
-    function jqLiteIsTextNode(html) {
-        return !HTML_REGEXP.test(html);
-    }
-    function jqLiteBuildFragment(html, context) {
-        var elem, tmp, tag, wrap, fragment = context.createDocumentFragment(), nodes = [], i, j, jj;
-        if (jqLiteIsTextNode(html)) {
-            nodes.push(context.createTextNode(html));
-        } else {
-            tmp = fragment.appendChild(context.createElement("div"));
-            tag = (TAG_NAME_REGEXP.exec(html) || [ "", "" ])[1].toLowerCase();
-            wrap = wrapMap[tag] || wrapMap._default;
-            tmp.innerHTML = "<div>&#160;</div>" + wrap[1] + html.replace(XHTML_TAG_REGEXP, "<$1></$2>") + wrap[2];
-            tmp.removeChild(tmp.firstChild);
-            i = wrap[0];
-            while (i--) {
-                tmp = tmp.lastChild;
-            }
-            for (j = 0, jj = tmp.childNodes.length; j < jj; ++j) nodes.push(tmp.childNodes[j]);
-            tmp = fragment.firstChild;
-            tmp.textContent = "";
-        }
-        fragment.textContent = "";
-        fragment.innerHTML = "";
-        return nodes;
-    }
-    function jqLiteParseHTML(html, context) {
-        context = context || document;
-        var parsed;
-        if (parsed = SINGLE_TAG_REGEXP.exec(html)) {
-            return [ context.createElement(parsed[1]) ];
-        }
-        return jqLiteBuildFragment(html, context);
-    }
     function JQLite(element) {
         if (element instanceof JQLite) {
             return element;
@@ -6164,7 +6113,10 @@
             return new JQLite(element);
         }
         if (isString(element)) {
-            jqLiteAddNodes(this, jqLiteParseHTML(element));
+            var div = document.createElement("div");
+            div.innerHTML = "<div>&#160;</div>" + element;
+            div.removeChild(div.firstChild);
+            jqLiteAddNodes(this, div.childNodes);
             var fragment = jqLite(document.createDocumentFragment());
             fragment.append(this);
         } else {
@@ -6287,11 +6239,10 @@
         }
         var names = isArray(name) ? name : [ name ];
         while (element.length) {
-            var node = element[0];
             for (var i = 0, ii = names.length; i < ii; i++) {
                 if ((value = element.data(names[i])) !== undefined) return value;
             }
-            element = jqLite(node.parentNode || node.nodeType === 11 && node.host);
+            element = element.parent();
         }
     }
     function jqLiteEmpty(element) {
@@ -6452,7 +6403,7 @@
     }, function(fn, name) {
         JQLite.prototype[name] = function(arg1, arg2) {
             var i, key;
-            if (fn !== jqLiteEmpty && (fn.length == 2 && (fn !== jqLiteHasClass && fn !== jqLiteController) ? arg1 : arg2) === undefined) {
+            if (fn !== jqLiteEmpty && (fn.length == 2 && fn !== jqLiteHasClass && fn !== jqLiteController ? arg1 : arg2) === undefined) {
                 if (isObject(arg1)) {
                     for (i = 0; i < this.length; i++) {
                         if (fn === jqLiteData) {
@@ -7271,7 +7222,7 @@
     var $compileMinErr = minErr("$compile");
     $CompileProvider.$inject = [ "$provide", "$$sanitizeUriProvider" ];
     function $CompileProvider($provide, $$sanitizeUriProvider) {
-        var hasDirectives = {}, Suffix = "Directive", COMMENT_DIRECTIVE_REGEXP = /^\s*directive\:\s*([\d\w\-_]+)\s+(.*)$/, CLASS_DIRECTIVE_REGEXP = /(([\d\w\-_]+)(?:\:([^;]+))?;?)/;
+        var hasDirectives = {}, Suffix = "Directive", COMMENT_DIRECTIVE_REGEXP = /^\s*directive\:\s*([\d\w\-_]+)\s+(.*)$/, CLASS_DIRECTIVE_REGEXP = /(([\d\w\-_]+)(?:\:([^;]+))?;?)/, TABLE_CONTENT_REGEXP = /^<\s*(tr|th|td|thead|tbody|tfoot)(\s+[^>]*)?>/i;
         var EVENT_HANDLER_ATTR_REGEXP = /^(on[a-z]+|formaction)$/;
         this.directive = function registerDirective(name, directiveFactory) {
             assertNotHasOwnProperty(name, "directive");
@@ -7645,11 +7596,7 @@
                         directiveValue = denormalizeTemplate(directiveValue);
                         if (directive.replace) {
                             replaceDirective = directive;
-                            if (jqLiteIsTextNode(directiveValue)) {
-                                $template = [];
-                            } else {
-                                $template = jqLite(directiveValue);
-                            }
+                            $template = directiveTemplateContents(directiveValue);
                             compileNode = $template[0];
                             if ($template.length != 1 || compileNode.nodeType !== 1) {
                                 throw $compileMinErr("tplrt", "Template for directive '{0}' must have exactly one root element. {1}", directiveName, "");
@@ -7938,6 +7885,23 @@
                     }
                 });
             }
+            function directiveTemplateContents(template) {
+                var type;
+                template = trim(template);
+                if (type = TABLE_CONTENT_REGEXP.exec(template)) {
+                    type = type[1].toLowerCase();
+                    var table = jqLite("<table>" + template + "</table>");
+                    if (/(thead|tbody|tfoot)/.test(type)) {
+                        return table.children(type);
+                    }
+                    table = table.children("tbody");
+                    if (type === "tr") {
+                        return table.children("tr");
+                    }
+                    return table.children("tr").contents();
+                }
+                return jqLite("<div>" + template + "</div>").contents();
+            }
             function compileTemplateUrl(directives, $compileNode, tAttrs, $rootElement, childTranscludeFn, preLinkFns, postLinkFns, previousCompileContext) {
                 var linkQueue = [], afterTemplateNodeLinkFn, afterTemplateChildLinkFn, beforeTemplateCompileNode = $compileNode[0], origAsyncDirective = directives.shift(), derivedSyncDirective = extend({}, origAsyncDirective, {
                     templateUrl: null,
@@ -7952,11 +7916,7 @@
                     var compileNode, tempTemplateAttrs, $template, childBoundTranscludeFn;
                     content = denormalizeTemplate(content);
                     if (origAsyncDirective.replace) {
-                        if (jqLiteIsTextNode(content)) {
-                            $template = [];
-                        } else {
-                            $template = jqLite(content);
-                        }
+                        $template = directiveTemplateContents(content);
                         compileNode = $template[0];
                         if ($template.length != 1 || compileNode.nodeType !== 1) {
                             throw $compileMinErr("tplrt", "Template for directive '{0}' must have exactly one root element. {1}", origAsyncDirective.name, templateUrl);
@@ -8231,7 +8191,7 @@
                 return data;
             } ],
             transformRequest: [ function(d) {
-                return isObject(d) && !isFile(d) && !isBlob(d) ? toJson(d) : d;
+                return isObject(d) && !isFile(d) ? toJson(d) : d;
             } ],
             headers: {
                 common: {
@@ -8397,9 +8357,9 @@
                             return cachedResp;
                         } else {
                             if (isArray(cachedResp)) {
-                                resolvePromise(cachedResp[1], cachedResp[0], copy(cachedResp[2]), cachedResp[3]);
+                                resolvePromise(cachedResp[1], cachedResp[0], copy(cachedResp[2]));
                             } else {
-                                resolvePromise(cachedResp, 200, {}, "OK");
+                                resolvePromise(cachedResp, 200, {});
                             }
                         }
                     } else {
@@ -8410,25 +8370,24 @@
                     $httpBackend(config.method, url, reqData, done, reqHeaders, config.timeout, config.withCredentials, config.responseType);
                 }
                 return promise;
-                function done(status, response, headersString, statusText) {
+                function done(status, response, headersString) {
                     if (cache) {
                         if (isSuccess(status)) {
-                            cache.put(url, [ status, response, parseHeaders(headersString), statusText ]);
+                            cache.put(url, [ status, response, parseHeaders(headersString) ]);
                         } else {
                             cache.remove(url);
                         }
                     }
-                    resolvePromise(response, status, headersString, statusText);
+                    resolvePromise(response, status, headersString);
                     if (!$rootScope.$$phase) $rootScope.$apply();
                 }
-                function resolvePromise(response, status, headers, statusText) {
+                function resolvePromise(response, status, headers) {
                     status = Math.max(status, 0);
                     (isSuccess(status) ? deferred.resolve : deferred.reject)({
                         data: response,
                         status: status,
                         headers: headersGetter(headers),
-                        config: config,
-                        statusText: statusText
+                        config: config
                     });
                 }
                 function removePendingReq() {
@@ -8503,7 +8462,7 @@
                             responseHeaders = xhr.getAllResponseHeaders();
                             response = "response" in xhr ? xhr.response : xhr.responseText;
                         }
-                        completeRequest(callback, status || xhr.status, response, responseHeaders, xhr.statusText || "");
+                        completeRequest(callback, status || xhr.status, response, responseHeaders);
                     }
                 };
                 if (withCredentials) {
@@ -8530,15 +8489,12 @@
                 jsonpDone && jsonpDone();
                 xhr && xhr.abort();
             }
-            function completeRequest(callback, status, response, headersString, statusText) {
+            function completeRequest(callback, status, response, headersString) {
                 timeoutId && $browserDefer.cancel(timeoutId);
                 jsonpDone = xhr = null;
-                if (status === 0) {
-                    status = response ? 200 : urlResolve(url).protocol == "file" ? 404 : 0;
-                }
-                status = status === 1223 ? 204 : status;
-                statusText = statusText || "";
-                callback(status, response, headersString, statusText);
+                status = status === 0 ? response ? 200 : 404 : status;
+                status = status == 1223 ? 204 : status;
+                callback(status, response, headersString);
                 $browser.$$completeOutstandingRequest(noop);
             }
         };
@@ -9430,11 +9386,9 @@
         this.$filter = $filter;
         this.options = options;
     };
-    Parser.ZERO = extend(function() {
+    Parser.ZERO = function() {
         return 0;
-    }, {
-        constant: true
-    });
+    };
     Parser.prototype = {
         constructor: Parser,
         parse: function(text, json) {
@@ -10279,22 +10233,16 @@
         };
     }
     function $$RAFProvider() {
-        this.$get = [ "$window", "$timeout", function($window, $timeout) {
-            var requestAnimationFrame = $window.requestAnimationFrame || $window.webkitRequestAnimationFrame || $window.mozRequestAnimationFrame;
-            var cancelAnimationFrame = $window.cancelAnimationFrame || $window.webkitCancelAnimationFrame || $window.mozCancelAnimationFrame || $window.webkitCancelRequestAnimationFrame;
-            var rafSupported = !!requestAnimationFrame;
-            var raf = rafSupported ? function(fn) {
+        this.$get = [ "$window", function($window) {
+            var requestAnimationFrame = $window.requestAnimationFrame || $window.webkitRequestAnimationFrame;
+            var cancelAnimationFrame = $window.cancelAnimationFrame || $window.webkitCancelAnimationFrame;
+            var raf = function(fn) {
                 var id = requestAnimationFrame(fn);
                 return function() {
                     cancelAnimationFrame(id);
                 };
-            } : function(fn) {
-                var timer = $timeout(fn, 16.66, false);
-                return function() {
-                    $timeout.cancel(timer);
-                };
             };
-            raf.supported = rafSupported;
+            raf.supported = !!requestAnimationFrame;
             return raf;
         } ];
     }
@@ -10382,15 +10330,12 @@
                 },
                 $watchCollection: function(obj, listener) {
                     var self = this;
-                    var newValue;
                     var oldValue;
-                    var veryOldValue;
-                    var trackVeryOldValue = listener.length > 1;
+                    var newValue;
                     var changeDetected = 0;
                     var objGetter = $parse(obj);
                     var internalArray = [];
                     var internalObject = {};
-                    var initRun = true;
                     var oldLength = 0;
                     function $watchCollectionWatch() {
                         newValue = objGetter(self);
@@ -10412,8 +10357,7 @@
                                 oldValue.length = oldLength = newLength;
                             }
                             for (var i = 0; i < newLength; i++) {
-                                var bothNaN = oldValue[i] !== oldValue[i] && newValue[i] !== newValue[i];
-                                if (!bothNaN && oldValue[i] !== newValue[i]) {
+                                if (oldValue[i] !== newValue[i]) {
                                     changeDetected++;
                                     oldValue[i] = newValue[i];
                                 }
@@ -10453,29 +10397,7 @@
                         return changeDetected;
                     }
                     function $watchCollectionAction() {
-                        if (initRun) {
-                            initRun = false;
-                            listener(newValue, newValue, self);
-                        } else {
-                            listener(newValue, veryOldValue, self);
-                        }
-                        if (trackVeryOldValue) {
-                            if (!isObject(newValue)) {
-                                veryOldValue = newValue;
-                            } else if (isArrayLike(newValue)) {
-                                veryOldValue = new Array(newValue.length);
-                                for (var i = 0; i < newValue.length; i++) {
-                                    veryOldValue[i] = newValue[i];
-                                }
-                            } else {
-                                veryOldValue = {};
-                                for (var key in newValue) {
-                                    if (hasOwnProperty.call(newValue, key)) {
-                                        veryOldValue[key] = newValue[key];
-                                    }
-                                }
-                            }
-                        }
+                        listener(newValue, oldValue, self);
                     }
                     return this.$watch($watchCollectionWatch, $watchCollectionAction);
                 },
@@ -10557,13 +10479,7 @@
                     if (parent.$$childTail == this) parent.$$childTail = this.$$prevSibling;
                     if (this.$$prevSibling) this.$$prevSibling.$$nextSibling = this.$$nextSibling;
                     if (this.$$nextSibling) this.$$nextSibling.$$prevSibling = this.$$prevSibling;
-                    this.$parent = this.$$nextSibling = this.$$prevSibling = this.$$childHead = this.$$childTail = this.$root = null;
-                    this.$$listeners = {};
-                    this.$$watchers = this.$$asyncQueue = this.$$postDigestQueue = [];
-                    this.$destroy = this.$digest = this.$apply = noop;
-                    this.$on = this.$watch = function() {
-                        return noop;
-                    };
+                    this.$parent = this.$$nextSibling = this.$$prevSibling = this.$$childHead = this.$$childTail = null;
                 },
                 $eval: function(expr, locals) {
                     return $parse(expr)(this, locals);
@@ -11285,6 +11201,20 @@
         paddedZone += padNumber(Math[zone > 0 ? "floor" : "ceil"](zone / 60), 2) + padNumber(Math.abs(zone % 60), 2);
         return paddedZone;
     }
+    function getFirstThursdayOfYear(year) {
+        var dayOfWeekOnFirst = new Date(year, 0, 1).getDay();
+        return new Date(year, 0, (dayOfWeekOnFirst <= 4 ? 5 : 12) - dayOfWeekOnFirst);
+    }
+    function getThursdayThisWeek(datetime) {
+        return new Date(datetime.getFullYear(), datetime.getMonth(), datetime.getDate() + (4 - datetime.getDay()));
+    }
+    function weekGetter(size) {
+        return function(date) {
+            var firstThurs = getFirstThursdayOfYear(date.getFullYear()), thisThurs = getThursdayThisWeek(date);
+            var diff = +thisThurs - +firstThurs, result = 1 + Math.round(diff / 6048e5);
+            return padNumber(result, size);
+        };
+    }
     function ampmGetter(date, formats) {
         return date.getHours() < 12 ? formats.AMPMS[0] : formats.AMPMS[1];
     }
@@ -11310,9 +11240,11 @@
         EEEE: dateStrGetter("Day"),
         EEE: dateStrGetter("Day", true),
         a: ampmGetter,
-        Z: timeZoneGetter
+        Z: timeZoneGetter,
+        ww: weekGetter(2),
+        w: weekGetter(1)
     };
-    var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZE']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d+|H+|h+|m+|s+|a|Z))(.*)/, NUMBER_STRING = /^\-?\d+$/;
+    var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZEw']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d+|H+|h+|m+|s+|a|Z|w+))(.*)/, NUMBER_STRING = /^\-?\d+$/;
     dateFilter.$inject = [ "$locale" ];
     function dateFilter($locale) {
         var R_ISO8601_STR = /^(\d{4})-?(\d\d)-?(\d\d)(?:T(\d\d)(?::?(\d\d)(?::?(\d\d)(?:\.(\d+))?)?)?(Z|([+-])(\d\d):?(\d\d))?)?$/;
@@ -11415,12 +11347,6 @@
                         predicate = predicate.substring(1);
                     }
                     get = $parse(predicate);
-                    if (get.constant) {
-                        var key = get();
-                        return reverseComparator(function(a, b) {
-                            return compare(a[key], b[key]);
-                        }, descending);
-                    }
                 }
                 return reverseComparator(function(a, b) {
                     return compare(get(a), get(b));
@@ -11660,8 +11586,18 @@
     var URL_REGEXP = /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$/;
     var EMAIL_REGEXP = /^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+@[a-z0-9-]+(\.[a-z0-9-]+)*$/i;
     var NUMBER_REGEXP = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/;
+    var DATE_REGEXP = /^(\d{4})-(\d{2})-(\d{2})$/;
+    var DATETIMELOCAL_REGEXP = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)$/;
+    var WEEK_REGEXP = /^(\d{4})-W(\d\d)$/;
+    var MONTH_REGEXP = /^(\d{4})-(\d\d)$/;
+    var TIME_REGEXP = /^(\d\d):(\d\d)$/;
     var inputType = {
         text: textInputType,
+        date: createDateInputType("date", DATE_REGEXP, createDateParser(DATE_REGEXP, [ "yyyy", "MM", "dd" ]), "yyyy-MM-dd"),
+        "datetime-local": createDateInputType("datetimelocal", DATETIMELOCAL_REGEXP, createDateParser(DATETIMELOCAL_REGEXP, [ "yyyy", "MM", "dd", "HH", "mm" ]), "yyyy-MM-ddTHH:mm"),
+        time: createDateInputType("time", TIME_REGEXP, createDateParser(TIME_REGEXP, [ "HH", "mm" ]), "HH:mm"),
+        week: createDateInputType("week", WEEK_REGEXP, weekParser, "yyyy-Www"),
+        month: createDateInputType("month", MONTH_REGEXP, createDateParser(MONTH_REGEXP, [ "yyyy", "MM" ]), "yyyy-MM"),
         number: numberInputType,
         url: urlInputType,
         email: emailInputType,
@@ -11688,6 +11624,7 @@
                 return value;
             };
             ctrl.$parsers.push(validator);
+            ctrl.$formatters.push(validator);
         }
     }
     function textInputType(scope, element, attr, ctrl, $sniffer, $browser) {
@@ -11783,6 +11720,90 @@
             ctrl.$formatters.push(maxLengthValidator);
         }
     }
+    function weekParser(isoWeek) {
+        if (isDate(isoWeek)) {
+            return isoWeek;
+        }
+        if (isString(isoWeek)) {
+            WEEK_REGEXP.lastIndex = 0;
+            var parts = WEEK_REGEXP.exec(isoWeek);
+            if (parts) {
+                var year = +parts[1], week = +parts[2], firstThurs = getFirstThursdayOfYear(year), addDays = (week - 1) * 7;
+                return new Date(year, 0, firstThurs.getDate() + addDays);
+            }
+        }
+        return NaN;
+    }
+    function createDateParser(regexp, mapping) {
+        return function(iso) {
+            var parts, map;
+            if (isDate(iso)) {
+                return iso;
+            }
+            if (isString(iso)) {
+                regexp.lastIndex = 0;
+                parts = regexp.exec(iso);
+                if (parts) {
+                    parts.shift();
+                    map = {
+                        yyyy: 0,
+                        MM: 1,
+                        dd: 1,
+                        HH: 0,
+                        mm: 0
+                    };
+                    forEach(parts, function(part, index) {
+                        if (index < mapping.length) {
+                            map[mapping[index]] = +part;
+                        }
+                    });
+                    return new Date(map.yyyy, map.MM - 1, map.dd, map.HH, map.mm);
+                }
+            }
+            return NaN;
+        };
+    }
+    function createDateInputType(type, regexp, parseDate, format) {
+        return function dynamicDateInputType(scope, element, attr, ctrl, $sniffer, $browser, $filter) {
+            textInputType(scope, element, attr, ctrl, $sniffer, $browser);
+            ctrl.$parsers.push(function(value) {
+                if (ctrl.$isEmpty(value)) {
+                    ctrl.$setValidity(type, true);
+                    return null;
+                }
+                if (regexp.test(value)) {
+                    ctrl.$setValidity(type, true);
+                    return parseDate(value);
+                }
+                ctrl.$setValidity(type, false);
+                return undefined;
+            });
+            ctrl.$formatters.push(function(value) {
+                if (isDate(value)) {
+                    return $filter("date")(value, format);
+                }
+                return "";
+            });
+            if (attr.min) {
+                var minValidator = function(value) {
+                    var valid = ctrl.$isEmpty(value) || parseDate(value) >= parseDate(attr.min);
+                    ctrl.$setValidity("min", valid);
+                    return valid ? value : undefined;
+                };
+                ctrl.$parsers.push(minValidator);
+                ctrl.$formatters.push(minValidator);
+            }
+            if (attr.max) {
+                var maxValidator = function(value) {
+                    var valid = ctrl.$isEmpty(value) || parseDate(value) <= parseDate(attr.max);
+                    ctrl.$setValidity("max", valid);
+                    return valid ? value : undefined;
+                };
+                ctrl.$parsers.push(maxValidator);
+                ctrl.$formatters.push(maxValidator);
+            }
+        };
+    }
     function numberInputType(scope, element, attr, ctrl, $sniffer, $browser) {
         textInputType(scope, element, attr, ctrl, $sniffer, $browser);
         ctrl.$parsers.push(function(value) {
@@ -11874,13 +11895,13 @@
             return value ? trueValue : falseValue;
         });
     }
-    var inputDirective = [ "$browser", "$sniffer", function($browser, $sniffer) {
+    var inputDirective = [ "$browser", "$sniffer", "$filter", function($browser, $sniffer, $filter) {
         return {
             restrict: "E",
             require: "?ngModel",
             link: function(scope, element, attr, ctrl) {
                 if (ctrl) {
-                    (inputType[lowercase(attr.type)] || inputType.text)(scope, element, attr, ctrl, $sniffer, $browser);
+                    (inputType[lowercase(attr.type)] || inputType.text)(scope, element, attr, ctrl, $sniffer, $browser, $filter);
                 }
             }
         };
@@ -12099,7 +12120,7 @@
     } ];
     function classDirective(name, selector) {
         name = "ngClass" + name;
-        return [ "$animate", function($animate) {
+        return function() {
             return {
                 restrict: "AC",
                 link: function(scope, element, attr) {
@@ -12112,88 +12133,39 @@
                         scope.$watch("$index", function($index, old$index) {
                             var mod = $index & 1;
                             if (mod !== old$index & 1) {
-                                var classes = arrayClasses(scope.$eval(attr[name]));
-                                mod === selector ? addClasses(classes) : removeClasses(classes);
+                                var classes = flattenClasses(scope.$eval(attr[name]));
+                                mod === selector ? attr.$addClass(classes) : attr.$removeClass(classes);
                             }
                         });
-                    }
-                    function addClasses(classes) {
-                        var newClasses = digestClassCounts(classes, 1);
-                        attr.$addClass(newClasses);
-                    }
-                    function removeClasses(classes) {
-                        var newClasses = digestClassCounts(classes, -1);
-                        attr.$removeClass(newClasses);
-                    }
-                    function digestClassCounts(classes, count) {
-                        var classCounts = element.data("$classCounts") || {};
-                        var classesToUpdate = [];
-                        forEach(classes, function(className) {
-                            if (count > 0 || classCounts[className]) {
-                                classCounts[className] = (classCounts[className] || 0) + count;
-                                if (classCounts[className] === +(count > 0)) {
-                                    classesToUpdate.push(className);
-                                }
-                            }
-                        });
-                        element.data("$classCounts", classCounts);
-                        return classesToUpdate.join(" ");
-                    }
-                    function updateClasses(oldClasses, newClasses) {
-                        var toAdd = arrayDifference(newClasses, oldClasses);
-                        var toRemove = arrayDifference(oldClasses, newClasses);
-                        toRemove = digestClassCounts(toRemove, -1);
-                        toAdd = digestClassCounts(toAdd, 1);
-                        if (toAdd.length === 0) {
-                            $animate.removeClass(element, toRemove);
-                        } else if (toRemove.length === 0) {
-                            $animate.addClass(element, toAdd);
-                        } else {
-                            $animate.setClass(element, toAdd, toRemove);
-                        }
                     }
                     function ngClassWatchAction(newVal) {
                         if (selector === true || scope.$index % 2 === selector) {
-                            var newClasses = arrayClasses(newVal || []);
+                            var newClasses = flattenClasses(newVal || "");
                             if (!oldVal) {
-                                addClasses(newClasses);
+                                attr.$addClass(newClasses);
                             } else if (!equals(newVal, oldVal)) {
-                                var oldClasses = arrayClasses(oldVal);
-                                updateClasses(oldClasses, newClasses);
+                                attr.$updateClass(newClasses, flattenClasses(oldVal));
                             }
                         }
                         oldVal = copy(newVal);
                     }
+                    function flattenClasses(classVal) {
+                        if (isArray(classVal)) {
+                            return classVal.join(" ");
+                        } else if (isObject(classVal)) {
+                            var classes = [], i = 0;
+                            forEach(classVal, function(v, k) {
+                                if (v) {
+                                    classes.push(k);
+                                }
+                            });
+                            return classes.join(" ");
+                        }
+                        return classVal;
+                    }
                 }
             };
-            function arrayDifference(tokens1, tokens2) {
-                var values = [];
-                outer: for (var i = 0; i < tokens1.length; i++) {
-                    var token = tokens1[i];
-                    for (var j = 0; j < tokens2.length; j++) {
-                        if (token == tokens2[j]) continue outer;
-                    }
-                    values.push(token);
-                }
-                return values;
-            }
-            function arrayClasses(classVal) {
-                if (isArray(classVal)) {
-                    return classVal;
-                } else if (isString(classVal)) {
-                    return classVal.split(" ");
-                } else if (isObject(classVal)) {
-                    var classes = [], i = 0;
-                    forEach(classVal, function(v, k) {
-                        if (v) {
-                            classes.push(k);
-                        }
-                    });
-                    return classes;
-                }
-                return classVal;
-            }
-        } ];
+        };
     }
     var ngClassDirective = classDirective("", true);
     var ngClassOddDirective = classDirective("Odd", 0);
@@ -12820,11 +12792,6 @@
                                         value = valueFn(scope, locals);
                                     }
                                 }
-                                if (optionGroupsCache[0].length > 1) {
-                                    if (optionGroupsCache[0][1].id !== key) {
-                                        optionGroupsCache[0][1].selected = false;
-                                    }
-                                }
                             }
                             ctrl.$setViewValue(value);
                         });
@@ -12923,7 +12890,7 @@
                                     if (existingOption.id !== option.id) {
                                         lastElement.val(existingOption.id = option.id);
                                     }
-                                    if (existingOption.selected !== option.selected) {
+                                    if (lastElement[0].selected !== option.selected) {
                                         lastElement.prop("selected", existingOption.selected = option.selected);
                                     }
                                 } else {
@@ -12999,12 +12966,8 @@
     } ];
     var styleDirective = valueFn({
         restrict: "E",
-        terminal: true
+        terminal: false
     });
-    if (window.angular.bootstrap) {
-        console.log("WARNING: Tried to load angular more than once.");
-        return;
-    }
     bindJQuery();
     publishExternalAPI(angular);
     jqLite(document).ready(function() {
@@ -13514,10 +13477,12 @@
             for (name in cookies) {
                 value = cookies[name];
                 if (!angular.isString(value)) {
-                    value = "" + value;
-                    cookies[name] = value;
-                }
-                if (value !== lastCookies[name]) {
+                    if (angular.isDefined(lastCookies[name])) {
+                        cookies[name] = lastCookies[name];
+                    } else {
+                        delete cookies[name];
+                    }
+                } else if (value !== lastCookies[name]) {
                     $browser.cookies(name, value);
                     updated = true;
                 }
@@ -19294,7 +19259,7 @@ angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCa
                 old: pinfo,
                 info: info
             });
-            if (!pinfo || (pinfo && pinfo.width && pinfo.width != info.width || pinfo && pinfo.height && pinfo.height != info.height)) {
+            if (!pinfo || pinfo && pinfo.width && pinfo.width != info.width || pinfo && pinfo.height && pinfo.height != info.height) {
                 var current = null, breakpoint;
                 for (var i = 0; i < ft.breakpoints.length; i++) {
                     breakpoint = ft.breakpoints[i];
