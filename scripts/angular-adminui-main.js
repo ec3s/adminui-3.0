@@ -764,14 +764,35 @@ adminuiApp.controller("TabsDemoCtrl", [ "$scope", function($scope) {
 var ModalDemoCtrl = function($scope, $modal, $log) {
     var t = '<div class="modal-header">' + "<h3>" + "I'm a modal!" + "</h3>" + "</div>" + '<div class="modal-body">' + "<ul>" + '<li ng-repeat="item in items">' + '<a ng-click="selected.item = item">' + "{{ item }}" + "</a>" + "</li>" + "</ul>" + "Selected:" + "<b>" + "{{ selected.item }}" + "</b>" + "</div>" + '<div class="modal-footer">' + '<button class="btn btn-primary" ng-click="ok()">' + "OK" + "</button>" + '<button class="btn btn-warning" ng-click="cancel()">' + "Cancel" + "</button>" + "</div>";
     $scope.items = [ "item1", "item2", "item3" ];
+    $scope.open2 = function() {
+        var modalInstance = $modal.open({
+            template: t,
+            controller: "ModalInstanceCtrl",
+            loader: false,
+            resolve: {
+                items: function() {
+                    return $scope.items;
+                }
+            }
+        });
+        modalInstance.result.then(function(selectedItem) {
+            $scope.selected = selectedItem;
+        }, function() {
+            $log.info("Modal dismissed at: " + new Date());
+        });
+    };
     $scope.open = function() {
         var modalInstance = $modal.open({
             template: t,
             controller: "ModalInstanceCtrl",
             resolve: {
-                items: function() {
-                    return $scope.items;
-                }
+                items: [ "$q", function($q) {
+                    var deferred = $q.defer();
+                    setTimeout(function() {
+                        deferred.resolve($scope.items);
+                    }, 3e3);
+                    return deferred.promise;
+                } ]
             }
         });
         modalInstance.result.then(function(selectedItem) {
@@ -797,7 +818,7 @@ var ModalInstanceCtrl = function($scope, $modalInstance, items) {
     };
 };
 
-adminuiApp.controller("ModalInstanceCtrl", [ "$scope", "$modalInstance", "items" ]);
+adminuiApp.controller("ModalInstanceCtrl", [ "$scope", "$modalInstance", "items", ModalInstanceCtrl ]);
 
 var DatepickerDemoCtrl = function($scope, $timeout) {
     $scope.today = function() {
