@@ -5178,7 +5178,7 @@
         offsetParent: function() {
             return this.map(function() {
                 var offsetParent = this.offsetParent || docElem;
-                while (offsetParent && !jQuery.nodeName(offsetParent, "html") && jQuery.css(offsetParent, "position") === "static") {
+                while (offsetParent && (!jQuery.nodeName(offsetParent, "html") && jQuery.css(offsetParent, "position") === "static")) {
                     offsetParent = offsetParent.offsetParent;
                 }
                 return offsetParent || docElem;
@@ -6403,7 +6403,7 @@
     }, function(fn, name) {
         JQLite.prototype[name] = function(arg1, arg2) {
             var i, key;
-            if (fn !== jqLiteEmpty && (fn.length == 2 && fn !== jqLiteHasClass && fn !== jqLiteController ? arg1 : arg2) === undefined) {
+            if (fn !== jqLiteEmpty && (fn.length == 2 && (fn !== jqLiteHasClass && fn !== jqLiteController) ? arg1 : arg2) === undefined) {
                 if (isObject(arg1)) {
                     for (i = 0; i < this.length; i++) {
                         if (fn === jqLiteData) {
@@ -19259,7 +19259,7 @@ angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCa
                 old: pinfo,
                 info: info
             });
-            if (!pinfo || pinfo && pinfo.width && pinfo.width != info.width || pinfo && pinfo.height && pinfo.height != info.height) {
+            if (!pinfo || (pinfo && pinfo.width && pinfo.width != info.width || pinfo && pinfo.height && pinfo.height != info.height)) {
                 var current = null, breakpoint;
                 for (var i = 0; i < ft.breakpoints.length; i++) {
                     breakpoint = ft.breakpoints[i];
