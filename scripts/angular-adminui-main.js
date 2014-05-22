@@ -206,6 +206,9 @@ var ListCtrl = function($scope) {
     $scope.change = function() {
         console.log("changed");
     };
+    $scope.disable = function() {
+        $scope.disabled = !$scope.disabled;
+    };
     $scope.list = [ {
         text: "item one",
         id: 1
@@ -259,7 +262,7 @@ var ListCtrl = function($scope) {
             name: "other item five"
         }
     };
-    $scope.selected2 = "im3";
+    $scope.selected = $scope.list[2];
     $scope.obj = obj;
     var status = "obj";
     $scope.changeSource = function() {
