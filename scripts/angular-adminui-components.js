@@ -5279,7 +5279,7 @@
                 }
                 return match;
             });
-            message = message + "\nhttp://errors.angularjs.org/1.2.16/" + (module ? module + "/" : "") + code;
+            message = message + "\nhttp://errors.angularjs.org/1.2.15-build.2399+sha.ca4ddfa/" + (module ? module + "/" : "") + code;
             for (i = 2; i < arguments.length; i++) {
                 message = message + (i == 2 ? "?" : "&") + "p" + (i - 2) + "=" + encodeURIComponent(stringify(arguments[i]));
             }
@@ -5459,9 +5459,6 @@
     }
     function isFile(obj) {
         return toString.call(obj) === "[object File]";
-    }
-    function isBlob(obj) {
-        return toString.call(obj) === "[object Blob]";
     }
     function isBoolean(value) {
         return typeof value === "boolean";
@@ -5935,11 +5932,11 @@
         });
     }
     var version = {
-        full: "1.2.16",
+        full: "1.2.15-build.2399+sha.ca4ddfa",
         major: 1,
         minor: 2,
-        dot: 16,
-        codeName: "badger-enumeration"
+        dot: 15,
+        codeName: "snapshot"
     };
     function publishExternalAPI(angular) {
         extend(angular, {
@@ -6102,54 +6099,6 @@
             return originalJqFn.apply(this, arguments);
         }
     }
-    var SINGLE_TAG_REGEXP = /^<(\w+)\s*\/?>(?:<\/\1>|)$/;
-    var HTML_REGEXP = /<|&#?\w+;/;
-    var TAG_NAME_REGEXP = /<([\w:]+)/;
-    var XHTML_TAG_REGEXP = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/gi;
-    var wrapMap = {
-        option: [ 1, '<select multiple="multiple">', "</select>" ],
-        thead: [ 1, "<table>", "</table>" ],
-        col: [ 2, "<table><colgroup>", "</colgroup></table>" ],
-        tr: [ 2, "<table><tbody>", "</tbody></table>" ],
-        td: [ 3, "<table><tbody><tr>", "</tr></tbody></table>" ],
-        _default: [ 0, "", "" ]
-    };
-    wrapMap.optgroup = wrapMap.option;
-    wrapMap.tbody = wrapMap.tfoot = wrapMap.colgroup = wrapMap.caption = wrapMap.thead;
-    wrapMap.th = wrapMap.td;
-    function jqLiteIsTextNode(html) {
-        return !HTML_REGEXP.test(html);
-    }
-    function jqLiteBuildFragment(html, context) {
-        var elem, tmp, tag, wrap, fragment = context.createDocumentFragment(), nodes = [], i, j, jj;
-        if (jqLiteIsTextNode(html)) {
-            nodes.push(context.createTextNode(html));
-        } else {
-            tmp = fragment.appendChild(context.createElement("div"));
-            tag = (TAG_NAME_REGEXP.exec(html) || [ "", "" ])[1].toLowerCase();
-            wrap = wrapMap[tag] || wrapMap._default;
-            tmp.innerHTML = "<div>&#160;</div>" + wrap[1] + html.replace(XHTML_TAG_REGEXP, "<$1></$2>") + wrap[2];
-            tmp.removeChild(tmp.firstChild);
-            i = wrap[0];
-            while (i--) {
-                tmp = tmp.lastChild;
-            }
-            for (j = 0, jj = tmp.childNodes.length; j < jj; ++j) nodes.push(tmp.childNodes[j]);
-            tmp = fragment.firstChild;
-            tmp.textContent = "";
-        }
-        fragment.textContent = "";
-        fragment.innerHTML = "";
-        return nodes;
-    }
-    function jqLiteParseHTML(html, context) {
-        context = context || document;
-        var parsed;
-        if (parsed = SINGLE_TAG_REGEXP.exec(html)) {
-            return [ context.createElement(parsed[1]) ];
-        }
-        return jqLiteBuildFragment(html, context);
-    }
     function JQLite(element) {
         if (element instanceof JQLite) {
             return element;
@@ -6164,7 +6113,10 @@
             return new JQLite(element);
         }
         if (isString(element)) {
-            jqLiteAddNodes(this, jqLiteParseHTML(element));
+            var div = document.createElement("div");
+            div.innerHTML = "<div>&#160;</div>" + element;
+            div.removeChild(div.firstChild);
+            jqLiteAddNodes(this, div.childNodes);
             var fragment = jqLite(document.createDocumentFragment());
             fragment.append(this);
         } else {
@@ -6287,11 +6239,10 @@
         }
         var names = isArray(name) ? name : [ name ];
         while (element.length) {
-            var node = element[0];
             for (var i = 0, ii = names.length; i < ii; i++) {
                 if ((value = element.data(names[i])) !== undefined) return value;
             }
-            element = jqLite(node.parentNode || node.nodeType === 11 && node.host);
+            element = element.parent();
         }
     }
     function jqLiteEmpty(element) {
@@ -7271,7 +7222,7 @@
     var $compileMinErr = minErr("$compile");
     $CompileProvider.$inject = [ "$provide", "$$sanitizeUriProvider" ];
     function $CompileProvider($provide, $$sanitizeUriProvider) {
-        var hasDirectives = {}, Suffix = "Directive", COMMENT_DIRECTIVE_REGEXP = /^\s*directive\:\s*([\d\w\-_]+)\s+(.*)$/, CLASS_DIRECTIVE_REGEXP = /(([\d\w\-_]+)(?:\:([^;]+))?;?)/;
+        var hasDirectives = {}, Suffix = "Directive", COMMENT_DIRECTIVE_REGEXP = /^\s*directive\:\s*([\d\w\-_]+)\s+(.*)$/, CLASS_DIRECTIVE_REGEXP = /(([\d\w\-_]+)(?:\:([^;]+))?;?)/, TABLE_CONTENT_REGEXP = /^<\s*(tr|th|td|thead|tbody|tfoot)(\s+[^>]*)?>/i;
         var EVENT_HANDLER_ATTR_REGEXP = /^(on[a-z]+|formaction)$/;
         this.directive = function registerDirective(name, directiveFactory) {
             assertNotHasOwnProperty(name, "directive");
@@ -7645,11 +7596,7 @@
                         directiveValue = denormalizeTemplate(directiveValue);
                         if (directive.replace) {
                             replaceDirective = directive;
-                            if (jqLiteIsTextNode(directiveValue)) {
-                                $template = [];
-                            } else {
-                                $template = jqLite(directiveValue);
-                            }
+                            $template = directiveTemplateContents(directiveValue);
                             compileNode = $template[0];
                             if ($template.length != 1 || compileNode.nodeType !== 1) {
                                 throw $compileMinErr("tplrt", "Template for directive '{0}' must have exactly one root element. {1}", directiveName, "");
@@ -7938,6 +7885,23 @@
                     }
                 });
             }
+            function directiveTemplateContents(template) {
+                var type;
+                template = trim(template);
+                if (type = TABLE_CONTENT_REGEXP.exec(template)) {
+                    type = type[1].toLowerCase();
+                    var table = jqLite("<table>" + template + "</table>");
+                    if (/(thead|tbody|tfoot)/.test(type)) {
+                        return table.children(type);
+                    }
+                    table = table.children("tbody");
+                    if (type === "tr") {
+                        return table.children("tr");
+                    }
+                    return table.children("tr").contents();
+                }
+                return jqLite("<div>" + template + "</div>").contents();
+            }
             function compileTemplateUrl(directives, $compileNode, tAttrs, $rootElement, childTranscludeFn, preLinkFns, postLinkFns, previousCompileContext) {
                 var linkQueue = [], afterTemplateNodeLinkFn, afterTemplateChildLinkFn, beforeTemplateCompileNode = $compileNode[0], origAsyncDirective = directives.shift(), derivedSyncDirective = extend({}, origAsyncDirective, {
                     templateUrl: null,
@@ -7952,11 +7916,7 @@
                     var compileNode, tempTemplateAttrs, $template, childBoundTranscludeFn;
                     content = denormalizeTemplate(content);
                     if (origAsyncDirective.replace) {
-                        if (jqLiteIsTextNode(content)) {
-                            $template = [];
-                        } else {
-                            $template = jqLite(content);
-                        }
+                        $template = directiveTemplateContents(content);
                         compileNode = $template[0];
                         if ($template.length != 1 || compileNode.nodeType !== 1) {
                             throw $compileMinErr("tplrt", "Template for directive '{0}' must have exactly one root element. {1}", origAsyncDirective.name, templateUrl);
@@ -8231,7 +8191,7 @@
                 return data;
             } ],
             transformRequest: [ function(d) {
-                return isObject(d) && !isFile(d) && !isBlob(d) ? toJson(d) : d;
+                return isObject(d) && !isFile(d) ? toJson(d) : d;
             } ],
             headers: {
                 common: {
@@ -8397,9 +8357,9 @@
                             return cachedResp;
                         } else {
                             if (isArray(cachedResp)) {
-                                resolvePromise(cachedResp[1], cachedResp[0], copy(cachedResp[2]), cachedResp[3]);
+                                resolvePromise(cachedResp[1], cachedResp[0], copy(cachedResp[2]));
                             } else {
-                                resolvePromise(cachedResp, 200, {}, "OK");
+                                resolvePromise(cachedResp, 200, {});
                             }
                         }
                     } else {
@@ -8410,25 +8370,24 @@
                     $httpBackend(config.method, url, reqData, done, reqHeaders, config.timeout, config.withCredentials, config.responseType);
                 }
                 return promise;
-                function done(status, response, headersString, statusText) {
+                function done(status, response, headersString) {
                     if (cache) {
                         if (isSuccess(status)) {
-                            cache.put(url, [ status, response, parseHeaders(headersString), statusText ]);
+                            cache.put(url, [ status, response, parseHeaders(headersString) ]);
                         } else {
                             cache.remove(url);
                         }
                     }
-                    resolvePromise(response, status, headersString, statusText);
+                    resolvePromise(response, status, headersString);
                     if (!$rootScope.$$phase) $rootScope.$apply();
                 }
-                function resolvePromise(response, status, headers, statusText) {
+                function resolvePromise(response, status, headers) {
                     status = Math.max(status, 0);
                     (isSuccess(status) ? deferred.resolve : deferred.reject)({
                         data: response,
                         status: status,
                         headers: headersGetter(headers),
-                        config: config,
-                        statusText: statusText
+                        config: config
                     });
                 }
                 function removePendingReq() {
@@ -8503,7 +8462,7 @@
                             responseHeaders = xhr.getAllResponseHeaders();
                             response = "response" in xhr ? xhr.response : xhr.responseText;
                         }
-                        completeRequest(callback, status || xhr.status, response, responseHeaders, xhr.statusText || "");
+                        completeRequest(callback, status || xhr.status, response, responseHeaders);
                     }
                 };
                 if (withCredentials) {
@@ -8530,15 +8489,12 @@
                 jsonpDone && jsonpDone();
                 xhr && xhr.abort();
             }
-            function completeRequest(callback, status, response, headersString, statusText) {
+            function completeRequest(callback, status, response, headersString) {
                 timeoutId && $browserDefer.cancel(timeoutId);
                 jsonpDone = xhr = null;
-                if (status === 0) {
-                    status = response ? 200 : urlResolve(url).protocol == "file" ? 404 : 0;
-                }
-                status = status === 1223 ? 204 : status;
-                statusText = statusText || "";
-                callback(status, response, headersString, statusText);
+                status = status === 0 ? response ? 200 : 404 : status;
+                status = status == 1223 ? 204 : status;
+                callback(status, response, headersString);
                 $browser.$$completeOutstandingRequest(noop);
             }
         };
@@ -9430,11 +9386,9 @@
         this.$filter = $filter;
         this.options = options;
     };
-    Parser.ZERO = extend(function() {
+    Parser.ZERO = function() {
         return 0;
-    }, {
-        constant: true
-    });
+    };
     Parser.prototype = {
         constructor: Parser,
         parse: function(text, json) {
@@ -10279,22 +10233,16 @@
         };
     }
     function $$RAFProvider() {
-        this.$get = [ "$window", "$timeout", function($window, $timeout) {
-            var requestAnimationFrame = $window.requestAnimationFrame || $window.webkitRequestAnimationFrame || $window.mozRequestAnimationFrame;
-            var cancelAnimationFrame = $window.cancelAnimationFrame || $window.webkitCancelAnimationFrame || $window.mozCancelAnimationFrame || $window.webkitCancelRequestAnimationFrame;
-            var rafSupported = !!requestAnimationFrame;
-            var raf = rafSupported ? function(fn) {
+        this.$get = [ "$window", function($window) {
+            var requestAnimationFrame = $window.requestAnimationFrame || $window.webkitRequestAnimationFrame;
+            var cancelAnimationFrame = $window.cancelAnimationFrame || $window.webkitCancelAnimationFrame;
+            var raf = function(fn) {
                 var id = requestAnimationFrame(fn);
                 return function() {
                     cancelAnimationFrame(id);
                 };
-            } : function(fn) {
-                var timer = $timeout(fn, 16.66, false);
-                return function() {
-                    $timeout.cancel(timer);
-                };
             };
-            raf.supported = rafSupported;
+            raf.supported = !!requestAnimationFrame;
             return raf;
         } ];
     }
@@ -10382,15 +10330,12 @@
                 },
                 $watchCollection: function(obj, listener) {
                     var self = this;
-                    var newValue;
                     var oldValue;
-                    var veryOldValue;
-                    var trackVeryOldValue = listener.length > 1;
+                    var newValue;
                     var changeDetected = 0;
                     var objGetter = $parse(obj);
                     var internalArray = [];
                     var internalObject = {};
-                    var initRun = true;
                     var oldLength = 0;
                     function $watchCollectionWatch() {
                         newValue = objGetter(self);
@@ -10412,8 +10357,7 @@
                                 oldValue.length = oldLength = newLength;
                             }
                             for (var i = 0; i < newLength; i++) {
-                                var bothNaN = oldValue[i] !== oldValue[i] && newValue[i] !== newValue[i];
-                                if (!bothNaN && oldValue[i] !== newValue[i]) {
+                                if (oldValue[i] !== newValue[i]) {
                                     changeDetected++;
                                     oldValue[i] = newValue[i];
                                 }
@@ -10453,29 +10397,7 @@
                         return changeDetected;
                     }
                     function $watchCollectionAction() {
-                        if (initRun) {
-                            initRun = false;
-                            listener(newValue, newValue, self);
-                        } else {
-                            listener(newValue, veryOldValue, self);
-                        }
-                        if (trackVeryOldValue) {
-                            if (!isObject(newValue)) {
-                                veryOldValue = newValue;
-                            } else if (isArrayLike(newValue)) {
-                                veryOldValue = new Array(newValue.length);
-                                for (var i = 0; i < newValue.length; i++) {
-                                    veryOldValue[i] = newValue[i];
-                                }
-                            } else {
-                                veryOldValue = {};
-                                for (var key in newValue) {
-                                    if (hasOwnProperty.call(newValue, key)) {
-                                        veryOldValue[key] = newValue[key];
-                                    }
-                                }
-                            }
-                        }
+                        listener(newValue, oldValue, self);
                     }
                     return this.$watch($watchCollectionWatch, $watchCollectionAction);
                 },
@@ -10557,13 +10479,7 @@
                     if (parent.$$childTail == this) parent.$$childTail = this.$$prevSibling;
                     if (this.$$prevSibling) this.$$prevSibling.$$nextSibling = this.$$nextSibling;
                     if (this.$$nextSibling) this.$$nextSibling.$$prevSibling = this.$$prevSibling;
-                    this.$parent = this.$$nextSibling = this.$$prevSibling = this.$$childHead = this.$$childTail = this.$root = null;
-                    this.$$listeners = {};
-                    this.$$watchers = this.$$asyncQueue = this.$$postDigestQueue = [];
-                    this.$destroy = this.$digest = this.$apply = noop;
-                    this.$on = this.$watch = function() {
-                        return noop;
-                    };
+                    this.$parent = this.$$nextSibling = this.$$prevSibling = this.$$childHead = this.$$childTail = null;
                 },
                 $eval: function(expr, locals) {
                     return $parse(expr)(this, locals);
@@ -11285,6 +11201,20 @@
         paddedZone += padNumber(Math[zone > 0 ? "floor" : "ceil"](zone / 60), 2) + padNumber(Math.abs(zone % 60), 2);
         return paddedZone;
     }
+    function getFirstThursdayOfYear(year) {
+        var dayOfWeekOnFirst = new Date(year, 0, 1).getDay();
+        return new Date(year, 0, (dayOfWeekOnFirst <= 4 ? 5 : 12) - dayOfWeekOnFirst);
+    }
+    function getThursdayThisWeek(datetime) {
+        return new Date(datetime.getFullYear(), datetime.getMonth(), datetime.getDate() + (4 - datetime.getDay()));
+    }
+    function weekGetter(size) {
+        return function(date) {
+            var firstThurs = getFirstThursdayOfYear(date.getFullYear()), thisThurs = getThursdayThisWeek(date);
+            var diff = +thisThurs - +firstThurs, result = 1 + Math.round(diff / 6048e5);
+            return padNumber(result, size);
+        };
+    }
     function ampmGetter(date, formats) {
         return date.getHours() < 12 ? formats.AMPMS[0] : formats.AMPMS[1];
     }
@@ -11310,9 +11240,11 @@
         EEEE: dateStrGetter("Day"),
         EEE: dateStrGetter("Day", true),
         a: ampmGetter,
-        Z: timeZoneGetter
+        Z: timeZoneGetter,
+        ww: weekGetter(2),
+        w: weekGetter(1)
     };
-    var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZE']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d+|H+|h+|m+|s+|a|Z))(.*)/, NUMBER_STRING = /^\-?\d+$/;
+    var DATE_FORMATS_SPLIT = /((?:[^yMdHhmsaZEw']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|d+|H+|h+|m+|s+|a|Z|w+))(.*)/, NUMBER_STRING = /^\-?\d+$/;
     dateFilter.$inject = [ "$locale" ];
     function dateFilter($locale) {
         var R_ISO8601_STR = /^(\d{4})-?(\d\d)-?(\d\d)(?:T(\d\d)(?::?(\d\d)(?::?(\d\d)(?:\.(\d+))?)?)?(Z|([+-])(\d\d):?(\d\d))?)?$/;
@@ -11415,12 +11347,6 @@
                         predicate = predicate.substring(1);
                     }
                     get = $parse(predicate);
-                    if (get.constant) {
-                        var key = get();
-                        return reverseComparator(function(a, b) {
-                            return compare(a[key], b[key]);
-                        }, descending);
-                    }
                 }
                 return reverseComparator(function(a, b) {
                     return compare(get(a), get(b));
@@ -11660,8 +11586,18 @@
     var URL_REGEXP = /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$/;
     var EMAIL_REGEXP = /^[a-z0-9!#$%&'*+/=?^_`{|}~.-]+@[a-z0-9-]+(\.[a-z0-9-]+)*$/i;
     var NUMBER_REGEXP = /^\s*(\-|\+)?(\d+|(\d*(\.\d*)))\s*$/;
+    var DATE_REGEXP = /^(\d{4})-(\d{2})-(\d{2})$/;
+    var DATETIMELOCAL_REGEXP = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)$/;
+    var WEEK_REGEXP = /^(\d{4})-W(\d\d)$/;
+    var MONTH_REGEXP = /^(\d{4})-(\d\d)$/;
+    var TIME_REGEXP = /^(\d\d):(\d\d)$/;
     var inputType = {
         text: textInputType,
+        date: createDateInputType("date", DATE_REGEXP, createDateParser(DATE_REGEXP, [ "yyyy", "MM", "dd" ]), "yyyy-MM-dd"),
+        "datetime-local": createDateInputType("datetimelocal", DATETIMELOCAL_REGEXP, createDateParser(DATETIMELOCAL_REGEXP, [ "yyyy", "MM", "dd", "HH", "mm" ]), "yyyy-MM-ddTHH:mm"),
+        time: createDateInputType("time", TIME_REGEXP, createDateParser(TIME_REGEXP, [ "HH", "mm" ]), "HH:mm"),
+        week: createDateInputType("week", WEEK_REGEXP, weekParser, "yyyy-Www"),
+        month: createDateInputType("month", MONTH_REGEXP, createDateParser(MONTH_REGEXP, [ "yyyy", "MM" ]), "yyyy-MM"),
         number: numberInputType,
         url: urlInputType,
         email: emailInputType,
@@ -11688,6 +11624,7 @@
                 return value;
             };
             ctrl.$parsers.push(validator);
+            ctrl.$formatters.push(validator);
         }
     }
     function textInputType(scope, element, attr, ctrl, $sniffer, $browser) {
@@ -11783,6 +11720,90 @@
             ctrl.$formatters.push(maxLengthValidator);
         }
     }
+    function weekParser(isoWeek) {
+        if (isDate(isoWeek)) {
+            return isoWeek;
+        }
+        if (isString(isoWeek)) {
+            WEEK_REGEXP.lastIndex = 0;
+            var parts = WEEK_REGEXP.exec(isoWeek);
+            if (parts) {
+                var year = +parts[1], week = +parts[2], firstThurs = getFirstThursdayOfYear(year), addDays = (week - 1) * 7;
+                return new Date(year, 0, firstThurs.getDate() + addDays);
+            }
+        }
+        return NaN;
+    }
+    function createDateParser(regexp, mapping) {
+        return function(iso) {
+            var parts, map;
+            if (isDate(iso)) {
+                return iso;
+            }
+            if (isString(iso)) {
+                regexp.lastIndex = 0;
+                parts = regexp.exec(iso);
+                if (parts) {
+                    parts.shift();
+                    map = {
+                        yyyy: 0,
+                        MM: 1,
+                        dd: 1,
+                        HH: 0,
+                        mm: 0
+                    };
+                    forEach(parts, function(part, index) {
+                        if (index < mapping.length) {
+                            map[mapping[index]] = +part;
+                        }
+                    });
+                    return new Date(map.yyyy, map.MM - 1, map.dd, map.HH, map.mm);
+                }
+            }
+            return NaN;
+        };
+    }
+    function createDateInputType(type, regexp, parseDate, format) {
+        return function dynamicDateInputType(scope, element, attr, ctrl, $sniffer, $browser, $filter) {
+            textInputType(scope, element, attr, ctrl, $sniffer, $browser);
+            ctrl.$parsers.push(function(value) {
+                if (ctrl.$isEmpty(value)) {
+                    ctrl.$setValidity(type, true);
+                    return null;
+                }
+                if (regexp.test(value)) {
+                    ctrl.$setValidity(type, true);
+                    return parseDate(value);
+                }
+                ctrl.$setValidity(type, false);
+                return undefined;
+            });
+            ctrl.$formatters.push(function(value) {
+                if (isDate(value)) {
+                    return $filter("date")(value, format);
+                }
+                return "";
+            });
+            if (attr.min) {
+                var minValidator = function(value) {
+                    var valid = ctrl.$isEmpty(value) || parseDate(value) >= parseDate(attr.min);
+                    ctrl.$setValidity("min", valid);
+                    return valid ? value : undefined;
+                };
+                ctrl.$parsers.push(minValidator);
+                ctrl.$formatters.push(minValidator);
+            }
+            if (attr.max) {
+                var maxValidator = function(value) {
+                    var valid = ctrl.$isEmpty(value) || parseDate(value) <= parseDate(attr.max);
+                    ctrl.$setValidity("max", valid);
+                    return valid ? value : undefined;
+                };
+                ctrl.$parsers.push(maxValidator);
+                ctrl.$formatters.push(maxValidator);
+            }
+        };
+    }
     function numberInputType(scope, element, attr, ctrl, $sniffer, $browser) {
         textInputType(scope, element, attr, ctrl, $sniffer, $browser);
         ctrl.$parsers.push(function(value) {
@@ -11874,13 +11895,13 @@
             return value ? trueValue : falseValue;
         });
     }
-    var inputDirective = [ "$browser", "$sniffer", function($browser, $sniffer) {
+    var inputDirective = [ "$browser", "$sniffer", "$filter", function($browser, $sniffer, $filter) {
         return {
             restrict: "E",
             require: "?ngModel",
             link: function(scope, element, attr, ctrl) {
                 if (ctrl) {
-                    (inputType[lowercase(attr.type)] || inputType.text)(scope, element, attr, ctrl, $sniffer, $browser);
+                    (inputType[lowercase(attr.type)] || inputType.text)(scope, element, attr, ctrl, $sniffer, $browser, $filter);
                 }
             }
         };
@@ -12099,7 +12120,7 @@
     } ];
     function classDirective(name, selector) {
         name = "ngClass" + name;
-        return [ "$animate", function($animate) {
+        return function() {
             return {
                 restrict: "AC",
                 link: function(scope, element, attr) {
@@ -12112,88 +12133,39 @@
                         scope.$watch("$index", function($index, old$index) {
                             var mod = $index & 1;
                             if (mod !== old$index & 1) {
-                                var classes = arrayClasses(scope.$eval(attr[name]));
-                                mod === selector ? addClasses(classes) : removeClasses(classes);
+                                var classes = flattenClasses(scope.$eval(attr[name]));
+                                mod === selector ? attr.$addClass(classes) : attr.$removeClass(classes);
                             }
                         });
-                    }
-                    function addClasses(classes) {
-                        var newClasses = digestClassCounts(classes, 1);
-                        attr.$addClass(newClasses);
-                    }
-                    function removeClasses(classes) {
-                        var newClasses = digestClassCounts(classes, -1);
-                        attr.$removeClass(newClasses);
-                    }
-                    function digestClassCounts(classes, count) {
-                        var classCounts = element.data("$classCounts") || {};
-                        var classesToUpdate = [];
-                        forEach(classes, function(className) {
-                            if (count > 0 || classCounts[className]) {
-                                classCounts[className] = (classCounts[className] || 0) + count;
-                                if (classCounts[className] === +(count > 0)) {
-                                    classesToUpdate.push(className);
-                                }
-                            }
-                        });
-                        element.data("$classCounts", classCounts);
-                        return classesToUpdate.join(" ");
-                    }
-                    function updateClasses(oldClasses, newClasses) {
-                        var toAdd = arrayDifference(newClasses, oldClasses);
-                        var toRemove = arrayDifference(oldClasses, newClasses);
-                        toRemove = digestClassCounts(toRemove, -1);
-                        toAdd = digestClassCounts(toAdd, 1);
-                        if (toAdd.length === 0) {
-                            $animate.removeClass(element, toRemove);
-                        } else if (toRemove.length === 0) {
-                            $animate.addClass(element, toAdd);
-                        } else {
-                            $animate.setClass(element, toAdd, toRemove);
-                        }
                     }
                     function ngClassWatchAction(newVal) {
                         if (selector === true || scope.$index % 2 === selector) {
-                            var newClasses = arrayClasses(newVal || []);
+                            var newClasses = flattenClasses(newVal || "");
                             if (!oldVal) {
-                                addClasses(newClasses);
+                                attr.$addClass(newClasses);
                             } else if (!equals(newVal, oldVal)) {
-                                var oldClasses = arrayClasses(oldVal);
-                                updateClasses(oldClasses, newClasses);
+                                attr.$updateClass(newClasses, flattenClasses(oldVal));
                             }
                         }
                         oldVal = copy(newVal);
                     }
+                    function flattenClasses(classVal) {
+                        if (isArray(classVal)) {
+                            return classVal.join(" ");
+                        } else if (isObject(classVal)) {
+                            var classes = [], i = 0;
+                            forEach(classVal, function(v, k) {
+                                if (v) {
+                                    classes.push(k);
+                                }
+                            });
+                            return classes.join(" ");
+                        }
+                        return classVal;
+                    }
                 }
             };
-            function arrayDifference(tokens1, tokens2) {
-                var values = [];
-                outer: for (var i = 0; i < tokens1.length; i++) {
-                    var token = tokens1[i];
-                    for (var j = 0; j < tokens2.length; j++) {
-                        if (token == tokens2[j]) continue outer;
-                    }
-                    values.push(token);
-                }
-                return values;
-            }
-            function arrayClasses(classVal) {
-                if (isArray(classVal)) {
-                    return classVal;
-                } else if (isString(classVal)) {
-                    return classVal.split(" ");
-                } else if (isObject(classVal)) {
-                    var classes = [], i = 0;
-                    forEach(classVal, function(v, k) {
-                        if (v) {
-                            classes.push(k);
-                        }
-                    });
-                    return classes;
-                }
-                return classVal;
-            }
-        } ];
+        };
     }
     var ngClassDirective = classDirective("", true);
     var ngClassOddDirective = classDirective("Odd", 0);
@@ -12820,11 +12792,6 @@
                                         value = valueFn(scope, locals);
                                     }
                                 }
-                                if (optionGroupsCache[0].length > 1) {
-                                    if (optionGroupsCache[0][1].id !== key) {
-                                        optionGroupsCache[0][1].selected = false;
-                                    }
-                                }
                             }
                             ctrl.$setViewValue(value);
                         });
@@ -12923,7 +12890,7 @@
                                     if (existingOption.id !== option.id) {
                                         lastElement.val(existingOption.id = option.id);
                                     }
-                                    if (existingOption.selected !== option.selected) {
+                                    if (lastElement[0].selected !== option.selected) {
                                         lastElement.prop("selected", existingOption.selected = option.selected);
                                     }
                                 } else {
@@ -12999,12 +12966,8 @@
     } ];
     var styleDirective = valueFn({
         restrict: "E",
-        terminal: true
+        terminal: false
     });
-    if (window.angular.bootstrap) {
-        console.log("WARNING: Tried to load angular more than once.");
-        return;
-    }
     bindJQuery();
     publishExternalAPI(angular);
     jqLite(document).ready(function() {
@@ -13514,10 +13477,12 @@
             for (name in cookies) {
                 value = cookies[name];
                 if (!angular.isString(value)) {
-                    value = "" + value;
-                    cookies[name] = value;
-                }
-                if (value !== lastCookies[name]) {
+                    if (angular.isDefined(lastCookies[name])) {
+                        cookies[name] = lastCookies[name];
+                    } else {
+                        delete cookies[name];
+                    }
+                } else if (value !== lastCookies[name]) {
                     $browser.cookies(name, value);
                     updated = true;
                 }
@@ -13780,9 +13745,9 @@
     } ]);
 })(window, window.angular);
 
-angular.module("ui.bootstrap", [ "ui.bootstrap.tpls", "ui.bootstrap.transition", "ui.bootstrap.collapse", "ui.bootstrap.accordion", "ui.bootstrap.alert", "ui.bootstrap.bindHtml", "ui.bootstrap.buttons", "ui.bootstrap.carousel", "ui.bootstrap.dateparser", "ui.bootstrap.position", "ui.bootstrap.datepicker", "ui.bootstrap.dropdown", "ui.bootstrap.modal", "ui.bootstrap.pagination", "ui.bootstrap.tooltip", "ui.bootstrap.popover", "ui.bootstrap.progressbar", "ui.bootstrap.rating", "ui.bootstrap.tabs", "ui.bootstrap.timepicker", "ui.bootstrap.typeahead" ]);
+angular.module("ui.bootstrap", [ "ui.bootstrap.tpls", "ui.bootstrap.transition", "ui.bootstrap.collapse", "ui.bootstrap.accordion", "ui.bootstrap.alert", "ui.bootstrap.bindHtml", "ui.bootstrap.buttons", "ui.bootstrap.carousel", "ui.bootstrap.position", "ui.bootstrap.datepicker", "ui.bootstrap.dropdownToggle", "ui.bootstrap.modal", "ui.bootstrap.pagination", "ui.bootstrap.tooltip", "ui.bootstrap.popover", "ui.bootstrap.progressbar", "ui.bootstrap.rating", "ui.bootstrap.tabs", "ui.bootstrap.timepicker", "ui.bootstrap.typeahead" ]);
 
-angular.module("ui.bootstrap.tpls", [ "template/accordion/accordion-group.html", "template/accordion/accordion.html", "template/alert/alert.html", "template/carousel/carousel.html", "template/carousel/slide.html", "template/datepicker/datepicker.html", "template/datepicker/day.html", "template/datepicker/month.html", "template/datepicker/popup.html", "template/datepicker/year.html", "template/modal/backdrop.html", "template/modal/window.html", "template/pagination/pager.html", "template/pagination/pagination.html", "template/tooltip/tooltip-html-unsafe-popup.html", "template/tooltip/tooltip-popup.html", "template/popover/popover.html", "template/progressbar/bar.html", "template/progressbar/progress.html", "template/progressbar/progressbar.html", "template/rating/rating.html", "template/tabs/tab.html", "template/tabs/tabset.html", "template/timepicker/timepicker.html", "template/typeahead/typeahead-match.html", "template/typeahead/typeahead-popup.html" ]);
+angular.module("ui.bootstrap.tpls", [ "template/accordion/accordion-group.html", "template/accordion/accordion.html", "template/alert/alert.html", "template/carousel/carousel.html", "template/carousel/slide.html", "template/datepicker/datepicker.html", "template/datepicker/popup.html", "template/modal/backdrop.html", "template/modal/window.html", "template/pagination/pager.html", "template/pagination/pagination.html", "template/tooltip/tooltip-html-unsafe-popup.html", "template/tooltip/tooltip-popup.html", "template/popover/popover.html", "template/progressbar/bar.html", "template/progressbar/progress.html", "template/progressbar/progressbar.html", "template/rating/rating.html", "template/tabs/tab.html", "template/tabs/tabset.html", "template/timepicker/timepicker.html", "template/typeahead/typeahead-match.html", "template/typeahead/typeahead-popup.html" ]);
 
 angular.module("ui.bootstrap.transition", []).factory("$transition", [ "$q", "$timeout", "$rootScope", function($q, $timeout, $rootScope) {
     var $transition = function(element, trigger, options) {
@@ -13843,7 +13808,7 @@ angular.module("ui.bootstrap.transition", []).factory("$transition", [ "$q", "$t
     return $transition;
 } ]);
 
-angular.module("ui.bootstrap.collapse", [ "ui.bootstrap.transition" ]).directive("collapse", [ "$transition", function($transition) {
+angular.module("ui.bootstrap.collapse", [ "ui.bootstrap.transition" ]).directive("collapse", [ "$transition", function($transition, $timeout) {
     return {
         link: function(scope, element, attrs) {
             var initialAnimSkip = true;
@@ -13937,7 +13902,7 @@ angular.module("ui.bootstrap.accordion", [ "ui.bootstrap.collapse" ]).constant("
     this.removeGroup = function(group) {
         var index = this.groups.indexOf(group);
         if (index !== -1) {
-            this.groups.splice(index, 1);
+            this.groups.splice(this.groups.indexOf(group), 1);
         }
     };
 } ]).directive("accordion", function() {
@@ -13948,7 +13913,7 @@ angular.module("ui.bootstrap.accordion", [ "ui.bootstrap.collapse" ]).constant("
         replace: false,
         templateUrl: "template/accordion/accordion.html"
     };
-}).directive("accordionGroup", function() {
+}).directive("accordionGroup", [ "$parse", function($parse) {
     return {
         require: "^accordion",
         restrict: "EA",
@@ -13956,9 +13921,7 @@ angular.module("ui.bootstrap.accordion", [ "ui.bootstrap.collapse" ]).constant("
         replace: true,
         templateUrl: "template/accordion/accordion-group.html",
         scope: {
-            heading: "@",
-            isOpen: "=?",
-            isDisabled: "=?"
+            heading: "@"
         },
         controller: function() {
             this.setHeading = function(element) {
@@ -13966,28 +13929,37 @@ angular.module("ui.bootstrap.accordion", [ "ui.bootstrap.collapse" ]).constant("
             };
         },
         link: function(scope, element, attrs, accordionCtrl) {
+            var getIsOpen, setIsOpen;
             accordionCtrl.addGroup(scope);
+            scope.isOpen = false;
+            if (attrs.isOpen) {
+                getIsOpen = $parse(attrs.isOpen);
+                setIsOpen = getIsOpen.assign;
+                scope.$parent.$watch(getIsOpen, function(value) {
+                    scope.isOpen = !!value;
+                });
+            }
             scope.$watch("isOpen", function(value) {
                 if (value) {
                     accordionCtrl.closeOthers(scope);
                 }
-            });
-            scope.toggleOpen = function() {
-                if (!scope.isDisabled) {
-                    scope.isOpen = !scope.isOpen;
+                if (setIsOpen) {
+                    setIsOpen(scope.$parent, value);
                 }
-            };
+            });
         }
     };
-}).directive("accordionHeading", function() {
+} ]).directive("accordionHeading", function() {
     return {
         restrict: "EA",
         transclude: true,
         template: "",
         replace: true,
         require: "^accordionGroup",
-        link: function(scope, element, attr, accordionGroupCtrl, transclude) {
-            accordionGroupCtrl.setHeading(transclude(scope, function() {}));
+        compile: function(element, attr, transclude) {
+            return function link(scope, element, attr, accordionGroupCtrl) {
+                accordionGroupCtrl.setHeading(transclude(scope, function() {}));
+            };
         }
     };
 }).directive("accordionTransclude", function() {
@@ -14016,7 +13988,7 @@ angular.module("ui.bootstrap.alert", []).controller("AlertController", [ "$scope
         transclude: true,
         replace: true,
         scope: {
-            type: "@",
+            type: "=",
             close: "&"
         }
     };
@@ -14047,10 +14019,9 @@ angular.module("ui.bootstrap.buttons", []).constant("buttonConfig", {
                 element.toggleClass(buttonsCtrl.activeClass, angular.equals(ngModelCtrl.$modelValue, scope.$eval(attrs.btnRadio)));
             };
             element.bind(buttonsCtrl.toggleEvent, function() {
-                var isActive = element.hasClass(buttonsCtrl.activeClass);
-                if (!isActive || angular.isDefined(attrs.uncheckable)) {
+                if (!element.hasClass(buttonsCtrl.activeClass)) {
                     scope.$apply(function() {
-                        ngModelCtrl.$setViewValue(isActive ? null : scope.$eval(attrs.btnRadio));
+                        ngModelCtrl.$setViewValue(scope.$eval(attrs.btnRadio));
                         ngModelCtrl.$render();
                     });
                 }
@@ -14086,11 +14057,11 @@ angular.module("ui.bootstrap.buttons", []).constant("buttonConfig", {
     };
 });
 
-angular.module("ui.bootstrap.carousel", [ "ui.bootstrap.transition" ]).controller("CarouselController", [ "$scope", "$timeout", "$transition", function($scope, $timeout, $transition) {
-    var self = this, slides = self.slides = $scope.slides = [], currentIndex = -1, currentTimeout, isPlaying;
+angular.module("ui.bootstrap.carousel", [ "ui.bootstrap.transition" ]).controller("CarouselController", [ "$scope", "$timeout", "$transition", "$q", function($scope, $timeout, $transition, $q) {
+    var self = this, slides = self.slides = [], currentIndex = -1, currentTimeout, isPlaying;
     self.currentSlide = null;
     var destroyed = false;
-    self.select = $scope.select = function(nextSlide, direction) {
+    self.select = function(nextSlide, direction) {
         var nextIndex = slides.indexOf(nextSlide);
         if (direction === undefined) {
             direction = nextIndex > currentIndex ? "next" : "prev";
@@ -14176,8 +14147,14 @@ angular.module("ui.bootstrap.carousel", [ "ui.bootstrap.transition" ]).controlle
             return self.select(slides[newIndex], "prev");
         }
     };
+    $scope.select = function(slide) {
+        self.select(slide);
+    };
     $scope.isActive = function(slide) {
         return self.currentSlide === slide;
+    };
+    $scope.slides = function() {
+        return slides;
     };
     $scope.$watch("interval", restartTimer);
     $scope.$on("$destroy", resetTimer);
@@ -14253,17 +14230,31 @@ angular.module("ui.bootstrap.carousel", [ "ui.bootstrap.transition" ]).controlle
             noPause: "="
         }
     };
-} ]).directive("slide", function() {
+} ]).directive("slide", [ "$parse", function($parse) {
     return {
         require: "^carousel",
         restrict: "EA",
         transclude: true,
         replace: true,
         templateUrl: "template/carousel/slide.html",
-        scope: {
-            active: "=?"
-        },
+        scope: {},
         link: function(scope, element, attrs, carouselCtrl) {
+            if (attrs.active) {
+                var getActive = $parse(attrs.active);
+                var setActive = getActive.assign;
+                var lastValue = scope.active = getActive(scope.$parent);
+                scope.$watch(function parentActiveWatch() {
+                    var parentActive = getActive(scope.$parent);
+                    if (parentActive !== scope.active) {
+                        if (parentActive !== lastValue) {
+                            lastValue = scope.active = parentActive;
+                        } else {
+                            setActive(scope.$parent, parentActive = lastValue = scope.active);
+                        }
+                    }
+                    return parentActive;
+                });
+            }
             carouselCtrl.addSlide(scope, element);
             scope.$on("$destroy", function() {
                 carouselCtrl.removeSlide(scope);
@@ -14275,133 +14266,6 @@ angular.module("ui.bootstrap.carousel", [ "ui.bootstrap.transition" ]).controlle
             });
         }
     };
-});
-
-angular.module("ui.bootstrap.dateparser", []).service("dateParser", [ "$locale", "orderByFilter", function($locale, orderByFilter) {
-    this.parsers = {};
-    var formatCodeToRegex = {
-        yyyy: {
-            regex: "\\d{4}",
-            apply: function(value) {
-                this.year = +value;
-            }
-        },
-        yy: {
-            regex: "\\d{2}",
-            apply: function(value) {
-                this.year = +value + 2e3;
-            }
-        },
-        y: {
-            regex: "\\d{1,4}",
-            apply: function(value) {
-                this.year = +value;
-            }
-        },
-        MMMM: {
-            regex: $locale.DATETIME_FORMATS.MONTH.join("|"),
-            apply: function(value) {
-                this.month = $locale.DATETIME_FORMATS.MONTH.indexOf(value);
-            }
-        },
-        MMM: {
-            regex: $locale.DATETIME_FORMATS.SHORTMONTH.join("|"),
-            apply: function(value) {
-                this.month = $locale.DATETIME_FORMATS.SHORTMONTH.indexOf(value);
-            }
-        },
-        MM: {
-            regex: "0[1-9]|1[0-2]",
-            apply: function(value) {
-                this.month = value - 1;
-            }
-        },
-        M: {
-            regex: "[1-9]|1[0-2]",
-            apply: function(value) {
-                this.month = value - 1;
-            }
-        },
-        dd: {
-            regex: "[0-2][0-9]{1}|3[0-1]{1}",
-            apply: function(value) {
-                this.date = +value;
-            }
-        },
-        d: {
-            regex: "[1-2]?[0-9]{1}|3[0-1]{1}",
-            apply: function(value) {
-                this.date = +value;
-            }
-        },
-        EEEE: {
-            regex: $locale.DATETIME_FORMATS.DAY.join("|")
-        },
-        EEE: {
-            regex: $locale.DATETIME_FORMATS.SHORTDAY.join("|")
-        }
-    };
-    this.createParser = function(format) {
-        var map = [], regex = format.split("");
-        angular.forEach(formatCodeToRegex, function(data, code) {
-            var index = format.indexOf(code);
-            if (index > -1) {
-                format = format.split("");
-                regex[index] = "(" + data.regex + ")";
-                format[index] = "$";
-                for (var i = index + 1, n = index + code.length; i < n; i++) {
-                    regex[i] = "";
-                    format[i] = "$";
-                }
-                format = format.join("");
-                map.push({
-                    index: index,
-                    apply: data.apply
-                });
-            }
-        });
-        return {
-            regex: new RegExp("^" + regex.join("") + "$"),
-            map: orderByFilter(map, "index")
-        };
-    };
-    this.parse = function(input, format) {
-        if (!angular.isString(input)) {
-            return input;
-        }
-        format = $locale.DATETIME_FORMATS[format] || format;
-        if (!this.parsers[format]) {
-            this.parsers[format] = this.createParser(format);
-        }
-        var parser = this.parsers[format], regex = parser.regex, map = parser.map, results = input.match(regex);
-        if (results && results.length) {
-            var fields = {
-                year: 1900,
-                month: 0,
-                date: 1,
-                hours: 0
-            }, dt;
-            for (var i = 1, n = results.length; i < n; i++) {
-                var mapper = map[i - 1];
-                if (mapper.apply) {
-                    mapper.apply.call(fields, results[i]);
-                }
-            }
-            if (isValid(fields.year, fields.month, fields.date)) {
-                dt = new Date(fields.year, fields.month, fields.date, fields.hours);
-            }
-            return dt;
-        }
-    };
-    function isValid(year, month, date) {
-        if (month === 1 && date > 28) {
-            return date === 29 && (year % 4 === 0 && year % 100 !== 0 || year % 400 === 0);
-        }
-        if (month === 3 || month === 5 || month === 8 || month === 10) {
-            return date < 31;
-        }
-        return true;
-    }
 } ]);
 
 angular.module("ui.bootstrap.position", []).factory("$position", [ "$document", "$window", function($document, $window) {
@@ -14450,298 +14314,236 @@ angular.module("ui.bootstrap.position", []).factory("$position", [ "$document", 
             return {
                 width: boundingClientRect.width || element.prop("offsetWidth"),
                 height: boundingClientRect.height || element.prop("offsetHeight"),
-                top: boundingClientRect.top + ($window.pageYOffset || $document[0].documentElement.scrollTop),
-                left: boundingClientRect.left + ($window.pageXOffset || $document[0].documentElement.scrollLeft)
+                top: boundingClientRect.top + ($window.pageYOffset || $document[0].body.scrollTop || $document[0].documentElement.scrollTop),
+                left: boundingClientRect.left + ($window.pageXOffset || $document[0].body.scrollLeft || $document[0].documentElement.scrollLeft)
             };
-        },
-        positionElements: function(hostEl, targetEl, positionStr, appendToBody) {
-            var positionStrParts = positionStr.split("-");
-            var pos0 = positionStrParts[0], pos1 = positionStrParts[1] || "center";
-            var hostElPos, targetElWidth, targetElHeight, targetElPos;
-            hostElPos = appendToBody ? this.offset(hostEl) : this.position(hostEl);
-            targetElWidth = targetEl.prop("offsetWidth");
-            targetElHeight = targetEl.prop("offsetHeight");
-            var shiftWidth = {
-                center: function() {
-                    return hostElPos.left + hostElPos.width / 2 - targetElWidth / 2;
-                },
-                left: function() {
-                    return hostElPos.left;
-                },
-                right: function() {
-                    return hostElPos.left + hostElPos.width;
-                }
-            };
-            var shiftHeight = {
-                center: function() {
-                    return hostElPos.top + hostElPos.height / 2 - targetElHeight / 2;
-                },
-                top: function() {
-                    return hostElPos.top;
-                },
-                bottom: function() {
-                    return hostElPos.top + hostElPos.height;
-                }
-            };
-            switch (pos0) {
-              case "right":
-                targetElPos = {
-                    top: shiftHeight[pos1](),
-                    left: shiftWidth[pos0]()
-                };
-                break;
-
-              case "left":
-                targetElPos = {
-                    top: shiftHeight[pos1](),
-                    left: hostElPos.left - targetElWidth
-                };
-                break;
-
-              case "bottom":
-                targetElPos = {
-                    top: shiftHeight[pos0](),
-                    left: shiftWidth[pos1]()
-                };
-                break;
-
-              default:
-                targetElPos = {
-                    top: hostElPos.top - targetElHeight,
-                    left: shiftWidth[pos1]()
-                };
-                break;
-            }
-            return targetElPos;
         }
     };
 } ]);
 
-angular.module("ui.bootstrap.datepicker", [ "ui.bootstrap.dateparser", "ui.bootstrap.position" ]).constant("datepickerConfig", {
-    formatDay: "dd",
-    formatMonth: "MMMM",
-    formatYear: "yyyy",
-    formatDayHeader: "EEE",
-    formatDayTitle: "MMMM yyyy",
-    formatMonthTitle: "yyyy",
-    datepickerMode: "day",
-    minMode: "day",
-    maxMode: "year",
+angular.module("ui.bootstrap.datepicker", [ "ui.bootstrap.position" ]).constant("datepickerConfig", {
+    dayFormat: "dd",
+    monthFormat: "MMMM",
+    yearFormat: "yyyy",
+    dayHeaderFormat: "EEE",
+    dayTitleFormat: "MMMM yyyy",
+    monthTitleFormat: "yyyy",
     showWeeks: true,
     startingDay: 0,
     yearRange: 20,
     minDate: null,
     maxDate: null
-}).controller("DatepickerController", [ "$scope", "$attrs", "$parse", "$interpolate", "$timeout", "$log", "dateFilter", "datepickerConfig", function($scope, $attrs, $parse, $interpolate, $timeout, $log, dateFilter, datepickerConfig) {
-    var self = this, ngModelCtrl = {
-        $setViewValue: angular.noop
-    };
-    this.modes = [ "day", "month", "year" ];
-    angular.forEach([ "formatDay", "formatMonth", "formatYear", "formatDayHeader", "formatDayTitle", "formatMonthTitle", "minMode", "maxMode", "showWeeks", "startingDay", "yearRange" ], function(key, index) {
-        self[key] = angular.isDefined($attrs[key]) ? index < 8 ? $interpolate($attrs[key])($scope.$parent) : $scope.$parent.$eval($attrs[key]) : datepickerConfig[key];
-    });
-    angular.forEach([ "minDate", "maxDate" ], function(key) {
-        if ($attrs[key]) {
-            $scope.$parent.$watch($parse($attrs[key]), function(value) {
-                self[key] = value ? new Date(value) : null;
-                self.refreshView();
-            });
-        } else {
-            self[key] = datepickerConfig[key] ? new Date(datepickerConfig[key]) : null;
+}).controller("DatepickerController", [ "$scope", "$attrs", "dateFilter", "datepickerConfig", function($scope, $attrs, dateFilter, dtConfig) {
+    var format = {
+        day: getValue($attrs.dayFormat, dtConfig.dayFormat),
+        month: getValue($attrs.monthFormat, dtConfig.monthFormat),
+        year: getValue($attrs.yearFormat, dtConfig.yearFormat),
+        dayHeader: getValue($attrs.dayHeaderFormat, dtConfig.dayHeaderFormat),
+        dayTitle: getValue($attrs.dayTitleFormat, dtConfig.dayTitleFormat),
+        monthTitle: getValue($attrs.monthTitleFormat, dtConfig.monthTitleFormat)
+    }, startingDay = getValue($attrs.startingDay, dtConfig.startingDay), yearRange = getValue($attrs.yearRange, dtConfig.yearRange);
+    this.minDate = dtConfig.minDate ? new Date(dtConfig.minDate) : null;
+    this.maxDate = dtConfig.maxDate ? new Date(dtConfig.maxDate) : null;
+    function getValue(value, defaultValue) {
+        return angular.isDefined(value) ? $scope.$parent.$eval(value) : defaultValue;
+    }
+    function getDaysInMonth(year, month) {
+        return new Date(year, month, 0).getDate();
+    }
+    function getDates(startDate, n) {
+        var dates = new Array(n);
+        var current = startDate, i = 0;
+        while (i < n) {
+            dates[i++] = new Date(current);
+            current.setDate(current.getDate() + 1);
         }
-    });
-    $scope.datepickerMode = $scope.datepickerMode || datepickerConfig.datepickerMode;
-    $scope.uniqueId = "datepicker-" + $scope.$id + "-" + Math.floor(Math.random() * 1e4);
-    this.activeDate = angular.isDefined($attrs.initDate) ? $scope.$parent.$eval($attrs.initDate) : new Date();
-    $scope.isActive = function(dateObject) {
-        if (self.compare(dateObject.date, self.activeDate) === 0) {
-            $scope.activeDateId = dateObject.uid;
-            return true;
-        }
-        return false;
-    };
-    this.init = function(ngModelCtrl_) {
-        ngModelCtrl = ngModelCtrl_;
-        ngModelCtrl.$render = function() {
-            self.render();
-        };
-    };
-    this.render = function() {
-        if (ngModelCtrl.$modelValue) {
-            var date = new Date(ngModelCtrl.$modelValue), isValid = !isNaN(date);
-            if (isValid) {
-                this.activeDate = date;
-            } else {
-                $log.error('Datepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
-            }
-            ngModelCtrl.$setValidity("date", isValid);
-        }
-        this.refreshView();
-    };
-    this.refreshView = function() {
-        if (this.element) {
-            this._refreshView();
-            var date = ngModelCtrl.$modelValue ? new Date(ngModelCtrl.$modelValue) : null;
-            ngModelCtrl.$setValidity("date-disabled", !date || this.element && !this.isDisabled(date));
-        }
-    };
-    this.createDateObject = function(date, format) {
-        var model = ngModelCtrl.$modelValue ? new Date(ngModelCtrl.$modelValue) : null;
+        return dates;
+    }
+    function makeDate(date, format, isSelected, isSecondary) {
         return {
             date: date,
             label: dateFilter(date, format),
-            selected: model && this.compare(date, model) === 0,
-            disabled: this.isDisabled(date),
-            current: this.compare(date, new Date()) === 0
+            selected: !!isSelected,
+            secondary: !!isSecondary
         };
-    };
-    this.isDisabled = function(date) {
-        return this.minDate && this.compare(date, this.minDate) < 0 || this.maxDate && this.compare(date, this.maxDate) > 0 || $attrs.dateDisabled && $scope.dateDisabled({
+    }
+    this.modes = [ {
+        name: "day",
+        getVisibleDates: function(date, selected) {
+            var year = date.getFullYear(), month = date.getMonth(), firstDayOfMonth = new Date(year, month, 1);
+            var difference = startingDay - firstDayOfMonth.getDay(), numDisplayedFromPreviousMonth = difference > 0 ? 7 - difference : -difference, firstDate = new Date(firstDayOfMonth), numDates = 0;
+            if (numDisplayedFromPreviousMonth > 0) {
+                firstDate.setDate(-numDisplayedFromPreviousMonth + 1);
+                numDates += numDisplayedFromPreviousMonth;
+            }
+            numDates += getDaysInMonth(year, month + 1);
+            numDates += (7 - numDates % 7) % 7;
+            var days = getDates(firstDate, numDates), labels = new Array(7);
+            for (var i = 0; i < numDates; i++) {
+                var dt = new Date(days[i]);
+                days[i] = makeDate(dt, format.day, selected && selected.getDate() === dt.getDate() && selected.getMonth() === dt.getMonth() && selected.getFullYear() === dt.getFullYear(), dt.getMonth() !== month);
+            }
+            for (var j = 0; j < 7; j++) {
+                labels[j] = dateFilter(days[j].date, format.dayHeader);
+            }
+            return {
+                objects: days,
+                title: dateFilter(date, format.dayTitle),
+                labels: labels
+            };
+        },
+        compare: function(date1, date2) {
+            return new Date(date1.getFullYear(), date1.getMonth(), date1.getDate()) - new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+        },
+        split: 7,
+        step: {
+            months: 1
+        }
+    }, {
+        name: "month",
+        getVisibleDates: function(date, selected) {
+            var months = new Array(12), year = date.getFullYear();
+            for (var i = 0; i < 12; i++) {
+                var dt = new Date(year, i, 1);
+                months[i] = makeDate(dt, format.month, selected && selected.getMonth() === i && selected.getFullYear() === year);
+            }
+            return {
+                objects: months,
+                title: dateFilter(date, format.monthTitle)
+            };
+        },
+        compare: function(date1, date2) {
+            return new Date(date1.getFullYear(), date1.getMonth()) - new Date(date2.getFullYear(), date2.getMonth());
+        },
+        split: 3,
+        step: {
+            years: 1
+        }
+    }, {
+        name: "year",
+        getVisibleDates: function(date, selected) {
+            var years = new Array(yearRange), year = date.getFullYear(), startYear = parseInt((year - 1) / yearRange, 10) * yearRange + 1;
+            for (var i = 0; i < yearRange; i++) {
+                var dt = new Date(startYear + i, 0, 1);
+                years[i] = makeDate(dt, format.year, selected && selected.getFullYear() === dt.getFullYear());
+            }
+            return {
+                objects: years,
+                title: [ years[0].label, years[yearRange - 1].label ].join(" - ")
+            };
+        },
+        compare: function(date1, date2) {
+            return date1.getFullYear() - date2.getFullYear();
+        },
+        split: 5,
+        step: {
+            years: yearRange
+        }
+    } ];
+    this.isDisabled = function(date, mode) {
+        var currentMode = this.modes[mode || 0];
+        return this.minDate && currentMode.compare(date, this.minDate) < 0 || this.maxDate && currentMode.compare(date, this.maxDate) > 0 || $scope.dateDisabled && $scope.dateDisabled({
             date: date,
-            mode: $scope.datepickerMode
+            mode: currentMode.name
         });
     };
-    this.split = function(arr, size) {
-        var arrays = [];
-        while (arr.length > 0) {
-            arrays.push(arr.splice(0, size));
-        }
-        return arrays;
-    };
-    $scope.select = function(date) {
-        if ($scope.datepickerMode === self.minMode) {
-            var dt = ngModelCtrl.$modelValue ? new Date(ngModelCtrl.$modelValue) : new Date(0, 0, 0, 0, 0, 0, 0);
-            dt.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
-            ngModelCtrl.$setViewValue(dt);
-            ngModelCtrl.$render();
-        } else {
-            self.activeDate = date;
-            $scope.datepickerMode = self.modes[self.modes.indexOf($scope.datepickerMode) - 1];
-        }
-    };
-    $scope.move = function(direction) {
-        var year = self.activeDate.getFullYear() + direction * (self.step.years || 0), month = self.activeDate.getMonth() + direction * (self.step.months || 0);
-        self.activeDate.setFullYear(year, month, 1);
-        self.refreshView();
-    };
-    $scope.toggleMode = function(direction) {
-        direction = direction || 1;
-        if ($scope.datepickerMode === self.maxMode && direction === 1 || $scope.datepickerMode === self.minMode && direction === -1) {
-            return;
-        }
-        $scope.datepickerMode = self.modes[self.modes.indexOf($scope.datepickerMode) + direction];
-    };
-    $scope.keys = {
-        13: "enter",
-        32: "space",
-        33: "pageup",
-        34: "pagedown",
-        35: "end",
-        36: "home",
-        37: "left",
-        38: "up",
-        39: "right",
-        40: "down"
-    };
-    var focusElement = function() {
-        $timeout(function() {
-            self.element[0].focus();
-        }, 0, false);
-    };
-    $scope.$on("datepicker.focus", focusElement);
-    $scope.keydown = function(evt) {
-        var key = $scope.keys[evt.which];
-        if (!key || evt.shiftKey || evt.altKey) {
-            return;
-        }
-        evt.preventDefault();
-        evt.stopPropagation();
-        if (key === "enter" || key === "space") {
-            if (self.isDisabled(self.activeDate)) {
-                return;
-            }
-            $scope.select(self.activeDate);
-            focusElement();
-        } else if (evt.ctrlKey && (key === "up" || key === "down")) {
-            $scope.toggleMode(key === "up" ? 1 : -1);
-            focusElement();
-        } else {
-            self.handleKeyDown(key, evt);
-            self.refreshView();
-        }
-    };
-} ]).directive("datepicker", function() {
+} ]).directive("datepicker", [ "dateFilter", "$parse", "datepickerConfig", "$log", function(dateFilter, $parse, datepickerConfig, $log) {
     return {
         restrict: "EA",
         replace: true,
         templateUrl: "template/datepicker/datepicker.html",
         scope: {
-            datepickerMode: "=?",
             dateDisabled: "&"
         },
         require: [ "datepicker", "?^ngModel" ],
         controller: "DatepickerController",
         link: function(scope, element, attrs, ctrls) {
-            var datepickerCtrl = ctrls[0], ngModelCtrl = ctrls[1];
-            if (ngModelCtrl) {
-                datepickerCtrl.init(ngModelCtrl);
+            var datepickerCtrl = ctrls[0], ngModel = ctrls[1];
+            if (!ngModel) {
+                return;
             }
-        }
-    };
-}).directive("daypicker", [ "dateFilter", function(dateFilter) {
-    return {
-        restrict: "EA",
-        replace: true,
-        templateUrl: "template/datepicker/day.html",
-        require: "^datepicker",
-        link: function(scope, element, attrs, ctrl) {
-            scope.showWeeks = ctrl.showWeeks;
-            ctrl.step = {
-                months: 1
+            var mode = 0, selected = new Date(), showWeeks = datepickerConfig.showWeeks;
+            if (attrs.showWeeks) {
+                scope.$parent.$watch($parse(attrs.showWeeks), function(value) {
+                    showWeeks = !!value;
+                    updateShowWeekNumbers();
+                });
+            } else {
+                updateShowWeekNumbers();
+            }
+            if (attrs.min) {
+                scope.$parent.$watch($parse(attrs.min), function(value) {
+                    datepickerCtrl.minDate = value ? new Date(value) : null;
+                    refill();
+                });
+            }
+            if (attrs.max) {
+                scope.$parent.$watch($parse(attrs.max), function(value) {
+                    datepickerCtrl.maxDate = value ? new Date(value) : null;
+                    refill();
+                });
+            }
+            function updateShowWeekNumbers() {
+                scope.showWeekNumbers = mode === 0 && showWeeks;
+            }
+            function split(arr, size) {
+                var arrays = [];
+                while (arr.length > 0) {
+                    arrays.push(arr.splice(0, size));
+                }
+                return arrays;
+            }
+            function refill(updateSelected) {
+                var date = null, valid = true;
+                if (ngModel.$modelValue) {
+                    date = new Date(ngModel.$modelValue);
+                    if (isNaN(date)) {
+                        valid = false;
+                        $log.error('Datepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
+                    } else if (updateSelected) {
+                        selected = date;
+                    }
+                }
+                ngModel.$setValidity("date", valid);
+                var currentMode = datepickerCtrl.modes[mode], data = currentMode.getVisibleDates(selected, date);
+                angular.forEach(data.objects, function(obj) {
+                    obj.disabled = datepickerCtrl.isDisabled(obj.date, mode);
+                });
+                ngModel.$setValidity("date-disabled", !date || !datepickerCtrl.isDisabled(date));
+                scope.rows = split(data.objects, currentMode.split);
+                scope.labels = data.labels || [];
+                scope.title = data.title;
+            }
+            function setMode(value) {
+                mode = value;
+                updateShowWeekNumbers();
+                refill();
+            }
+            ngModel.$render = function() {
+                refill(true);
             };
-            ctrl.element = element;
-            var DAYS_IN_MONTH = [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
-            function getDaysInMonth(year, month) {
-                return month === 1 && year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : DAYS_IN_MONTH[month];
-            }
-            function getDates(startDate, n) {
-                var dates = new Array(n), current = new Date(startDate), i = 0;
-                current.setHours(12);
-                while (i < n) {
-                    dates[i++] = new Date(current);
-                    current.setDate(current.getDate() + 1);
-                }
-                return dates;
-            }
-            ctrl._refreshView = function() {
-                var year = ctrl.activeDate.getFullYear(), month = ctrl.activeDate.getMonth(), firstDayOfMonth = new Date(year, month, 1), difference = ctrl.startingDay - firstDayOfMonth.getDay(), numDisplayedFromPreviousMonth = difference > 0 ? 7 - difference : -difference, firstDate = new Date(firstDayOfMonth);
-                if (numDisplayedFromPreviousMonth > 0) {
-                    firstDate.setDate(-numDisplayedFromPreviousMonth + 1);
-                }
-                var days = getDates(firstDate, 42);
-                for (var i = 0; i < 42; i++) {
-                    days[i] = angular.extend(ctrl.createDateObject(days[i], ctrl.formatDay), {
-                        secondary: days[i].getMonth() !== month,
-                        uid: scope.uniqueId + "-" + i
-                    });
-                }
-                scope.labels = new Array(7);
-                for (var j = 0; j < 7; j++) {
-                    scope.labels[j] = {
-                        abbr: dateFilter(days[j].date, ctrl.formatDayHeader),
-                        full: dateFilter(days[j].date, "EEEE")
-                    };
-                }
-                scope.title = dateFilter(ctrl.activeDate, ctrl.formatDayTitle);
-                scope.rows = ctrl.split(days, 7);
-                if (scope.showWeeks) {
-                    scope.weekNumbers = [];
-                    var weekNumber = getISO8601WeekNumber(scope.rows[0][0].date), numWeeks = scope.rows.length;
-                    while (scope.weekNumbers.push(weekNumber++) < numWeeks) {}
+            scope.select = function(date) {
+                if (mode === 0) {
+                    var dt = ngModel.$modelValue ? new Date(ngModel.$modelValue) : new Date(0, 0, 0, 0, 0, 0, 0);
+                    dt.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+                    ngModel.$setViewValue(dt);
+                    refill(true);
+                } else {
+                    selected = date;
+                    setMode(mode - 1);
                 }
             };
-            ctrl.compare = function(date1, date2) {
-                return new Date(date1.getFullYear(), date1.getMonth(), date1.getDate()) - new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+            scope.move = function(direction) {
+                var step = datepickerCtrl.modes[mode].step;
+                selected.setMonth(selected.getMonth() + direction * (step.months || 0));
+                selected.setFullYear(selected.getFullYear() + direction * (step.years || 0));
+                refill();
+            };
+            scope.toggleMode = function() {
+                setMode((mode + 1) % datepickerCtrl.modes.length);
+            };
+            scope.getWeekNumber = function(row) {
+                return mode === 0 && scope.showWeekNumbers && row.length === 7 ? getISO8601WeekNumber(row[0].date) : null;
             };
             function getISO8601WeekNumber(date) {
                 var checkDate = new Date(date);
@@ -14751,192 +14553,91 @@ angular.module("ui.bootstrap.datepicker", [ "ui.bootstrap.dateparser", "ui.boots
                 checkDate.setDate(1);
                 return Math.floor(Math.round((time - checkDate) / 864e5) / 7) + 1;
             }
-            ctrl.handleKeyDown = function(key, evt) {
-                var date = ctrl.activeDate.getDate();
-                if (key === "left") {
-                    date = date - 1;
-                } else if (key === "up") {
-                    date = date - 7;
-                } else if (key === "right") {
-                    date = date + 1;
-                } else if (key === "down") {
-                    date = date + 7;
-                } else if (key === "pageup" || key === "pagedown") {
-                    var month = ctrl.activeDate.getMonth() + (key === "pageup" ? -1 : 1);
-                    ctrl.activeDate.setMonth(month, 1);
-                    date = Math.min(getDaysInMonth(ctrl.activeDate.getFullYear(), ctrl.activeDate.getMonth()), date);
-                } else if (key === "home") {
-                    date = 1;
-                } else if (key === "end") {
-                    date = getDaysInMonth(ctrl.activeDate.getFullYear(), ctrl.activeDate.getMonth());
-                }
-                ctrl.activeDate.setDate(date);
-            };
-            ctrl.refreshView();
-        }
-    };
-} ]).directive("monthpicker", [ "dateFilter", function(dateFilter) {
-    return {
-        restrict: "EA",
-        replace: true,
-        templateUrl: "template/datepicker/month.html",
-        require: "^datepicker",
-        link: function(scope, element, attrs, ctrl) {
-            ctrl.step = {
-                years: 1
-            };
-            ctrl.element = element;
-            ctrl._refreshView = function() {
-                var months = new Array(12), year = ctrl.activeDate.getFullYear();
-                for (var i = 0; i < 12; i++) {
-                    months[i] = angular.extend(ctrl.createDateObject(new Date(year, i, 1), ctrl.formatMonth), {
-                        uid: scope.uniqueId + "-" + i
-                    });
-                }
-                scope.title = dateFilter(ctrl.activeDate, ctrl.formatMonthTitle);
-                scope.rows = ctrl.split(months, 3);
-            };
-            ctrl.compare = function(date1, date2) {
-                return new Date(date1.getFullYear(), date1.getMonth()) - new Date(date2.getFullYear(), date2.getMonth());
-            };
-            ctrl.handleKeyDown = function(key, evt) {
-                var date = ctrl.activeDate.getMonth();
-                if (key === "left") {
-                    date = date - 1;
-                } else if (key === "up") {
-                    date = date - 3;
-                } else if (key === "right") {
-                    date = date + 1;
-                } else if (key === "down") {
-                    date = date + 3;
-                } else if (key === "pageup" || key === "pagedown") {
-                    var year = ctrl.activeDate.getFullYear() + (key === "pageup" ? -1 : 1);
-                    ctrl.activeDate.setFullYear(year);
-                } else if (key === "home") {
-                    date = 0;
-                } else if (key === "end") {
-                    date = 11;
-                }
-                ctrl.activeDate.setMonth(date);
-            };
-            ctrl.refreshView();
-        }
-    };
-} ]).directive("yearpicker", [ "dateFilter", function(dateFilter) {
-    return {
-        restrict: "EA",
-        replace: true,
-        templateUrl: "template/datepicker/year.html",
-        require: "^datepicker",
-        link: function(scope, element, attrs, ctrl) {
-            var range = ctrl.yearRange;
-            ctrl.step = {
-                years: range
-            };
-            ctrl.element = element;
-            function getStartingYear(year) {
-                return parseInt((year - 1) / range, 10) * range + 1;
-            }
-            ctrl._refreshView = function() {
-                var years = new Array(range);
-                for (var i = 0, start = getStartingYear(ctrl.activeDate.getFullYear()); i < range; i++) {
-                    years[i] = angular.extend(ctrl.createDateObject(new Date(start + i, 0, 1), ctrl.formatYear), {
-                        uid: scope.uniqueId + "-" + i
-                    });
-                }
-                scope.title = [ years[0].label, years[range - 1].label ].join(" - ");
-                scope.rows = ctrl.split(years, 5);
-            };
-            ctrl.compare = function(date1, date2) {
-                return date1.getFullYear() - date2.getFullYear();
-            };
-            ctrl.handleKeyDown = function(key, evt) {
-                var date = ctrl.activeDate.getFullYear();
-                if (key === "left") {
-                    date = date - 1;
-                } else if (key === "up") {
-                    date = date - 5;
-                } else if (key === "right") {
-                    date = date + 1;
-                } else if (key === "down") {
-                    date = date + 5;
-                } else if (key === "pageup" || key === "pagedown") {
-                    date += (key === "pageup" ? -1 : 1) * ctrl.step.years;
-                } else if (key === "home") {
-                    date = getStartingYear(ctrl.activeDate.getFullYear());
-                } else if (key === "end") {
-                    date = getStartingYear(ctrl.activeDate.getFullYear()) + range - 1;
-                }
-                ctrl.activeDate.setFullYear(date);
-            };
-            ctrl.refreshView();
         }
     };
 } ]).constant("datepickerPopupConfig", {
-    datepickerPopup: "yyyy-MM-dd",
+    dateFormat: "yyyy-MM-dd",
     currentText: "Today",
+    toggleWeeksText: "Weeks",
     clearText: "Clear",
     closeText: "Done",
     closeOnDateSelection: true,
     appendToBody: false,
     showButtonBar: true
-}).directive("datepickerPopup", [ "$compile", "$parse", "$document", "$position", "dateFilter", "dateParser", "datepickerPopupConfig", function($compile, $parse, $document, $position, dateFilter, dateParser, datepickerPopupConfig) {
+}).directive("datepickerPopup", [ "$compile", "$parse", "$document", "$position", "dateFilter", "datepickerPopupConfig", "datepickerConfig", function($compile, $parse, $document, $position, dateFilter, datepickerPopupConfig, datepickerConfig) {
     return {
         restrict: "EA",
         require: "ngModel",
-        scope: {
-            isOpen: "=?",
-            currentText: "@",
-            clearText: "@",
-            closeText: "@",
-            dateDisabled: "&"
-        },
-        link: function(scope, element, attrs, ngModel) {
-            var dateFormat, closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? scope.$parent.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection, appendToBody = angular.isDefined(attrs.datepickerAppendToBody) ? scope.$parent.$eval(attrs.datepickerAppendToBody) : datepickerPopupConfig.appendToBody;
-            scope.showButtonBar = angular.isDefined(attrs.showButtonBar) ? scope.$parent.$eval(attrs.showButtonBar) : datepickerPopupConfig.showButtonBar;
-            scope.getText = function(key) {
-                return scope[key + "Text"] || datepickerPopupConfig[key + "Text"];
-            };
+        link: function(originalScope, element, attrs, ngModel) {
+            var scope = originalScope.$new(), dateFormat, closeOnDateSelection = angular.isDefined(attrs.closeOnDateSelection) ? originalScope.$eval(attrs.closeOnDateSelection) : datepickerPopupConfig.closeOnDateSelection, appendToBody = angular.isDefined(attrs.datepickerAppendToBody) ? originalScope.$eval(attrs.datepickerAppendToBody) : datepickerPopupConfig.appendToBody;
             attrs.$observe("datepickerPopup", function(value) {
-                dateFormat = value || datepickerPopupConfig.datepickerPopup;
+                dateFormat = value || datepickerPopupConfig.dateFormat;
                 ngModel.$render();
             });
+            scope.showButtonBar = angular.isDefined(attrs.showButtonBar) ? originalScope.$eval(attrs.showButtonBar) : datepickerPopupConfig.showButtonBar;
+            originalScope.$on("$destroy", function() {
+                $popup.remove();
+                scope.$destroy();
+            });
+            attrs.$observe("currentText", function(text) {
+                scope.currentText = angular.isDefined(text) ? text : datepickerPopupConfig.currentText;
+            });
+            attrs.$observe("toggleWeeksText", function(text) {
+                scope.toggleWeeksText = angular.isDefined(text) ? text : datepickerPopupConfig.toggleWeeksText;
+            });
+            attrs.$observe("clearText", function(text) {
+                scope.clearText = angular.isDefined(text) ? text : datepickerPopupConfig.clearText;
+            });
+            attrs.$observe("closeText", function(text) {
+                scope.closeText = angular.isDefined(text) ? text : datepickerPopupConfig.closeText;
+            });
+            var getIsOpen, setIsOpen;
+            if (attrs.isOpen) {
+                getIsOpen = $parse(attrs.isOpen);
+                setIsOpen = getIsOpen.assign;
+                originalScope.$watch(getIsOpen, function updateOpen(value) {
+                    scope.isOpen = !!value;
+                });
+            }
+            scope.isOpen = getIsOpen ? getIsOpen(originalScope) : false;
+            function setOpen(value) {
+                if (setIsOpen) {
+                    setIsOpen(originalScope, !!value);
+                } else {
+                    scope.isOpen = !!value;
+                }
+            }
+            var documentClickBind = function(event) {
+                if (scope.isOpen && event.target !== element[0]) {
+                    scope.$apply(function() {
+                        setOpen(false);
+                    });
+                }
+            };
+            var elementFocusBind = function() {
+                scope.$apply(function() {
+                    setOpen(true);
+                });
+            };
             var popupEl = angular.element("<div datepicker-popup-wrap><div datepicker></div></div>");
             popupEl.attr({
                 "ng-model": "date",
                 "ng-change": "dateSelection()"
             });
-            function cameltoDash(string) {
-                return string.replace(/([A-Z])/g, function($1) {
-                    return "-" + $1.toLowerCase();
-                });
-            }
-            var datepickerEl = angular.element(popupEl.children()[0]);
+            var datepickerEl = angular.element(popupEl.children()[0]), datepickerOptions = {};
             if (attrs.datepickerOptions) {
-                angular.forEach(scope.$parent.$eval(attrs.datepickerOptions), function(value, option) {
-                    datepickerEl.attr(cameltoDash(option), value);
-                });
-            }
-            angular.forEach([ "minDate", "maxDate" ], function(key) {
-                if (attrs[key]) {
-                    scope.$parent.$watch($parse(attrs[key]), function(value) {
-                        scope[key] = value;
-                    });
-                    datepickerEl.attr(cameltoDash(key), key);
-                }
-            });
-            if (attrs.dateDisabled) {
-                datepickerEl.attr("date-disabled", "dateDisabled({ date: date, mode: mode })");
+                datepickerOptions = originalScope.$eval(attrs.datepickerOptions);
+                datepickerEl.attr(angular.extend({}, datepickerOptions));
             }
             function parseDate(viewValue) {
                 if (!viewValue) {
                     ngModel.$setValidity("date", true);
                     return null;
-                } else if (angular.isDate(viewValue) && !isNaN(viewValue)) {
+                } else if (angular.isDate(viewValue)) {
                     ngModel.$setValidity("date", true);
                     return viewValue;
                 } else if (angular.isString(viewValue)) {
-                    var date = dateParser.parse(viewValue, dateFormat) || new Date(viewValue);
+                    var date = new Date(viewValue);
                     if (isNaN(date)) {
                         ngModel.$setValidity("date", false);
                         return undefined;
@@ -14957,8 +14658,7 @@ angular.module("ui.bootstrap.datepicker", [ "ui.bootstrap.dateparser", "ui.boots
                 ngModel.$setViewValue(scope.date);
                 ngModel.$render();
                 if (closeOnDateSelection) {
-                    scope.isOpen = false;
-                    element[0].focus();
+                    setOpen(false);
                 }
             };
             element.bind("input change keyup", function() {
@@ -14969,53 +14669,57 @@ angular.module("ui.bootstrap.datepicker", [ "ui.bootstrap.dateparser", "ui.boots
             ngModel.$render = function() {
                 var date = ngModel.$viewValue ? dateFilter(ngModel.$viewValue, dateFormat) : "";
                 element.val(date);
-                scope.date = parseDate(ngModel.$modelValue);
+                scope.date = ngModel.$modelValue;
             };
-            var documentClickBind = function(event) {
-                if (scope.isOpen && event.target !== element[0]) {
-                    scope.$apply(function() {
-                        scope.isOpen = false;
+            function addWatchableAttribute(attribute, scopeProperty, datepickerAttribute) {
+                if (attribute) {
+                    originalScope.$watch($parse(attribute), function(value) {
+                        scope[scopeProperty] = value;
                     });
+                    datepickerEl.attr(datepickerAttribute || scopeProperty, scopeProperty);
                 }
-            };
-            var keydown = function(evt, noApply) {
-                scope.keydown(evt);
-            };
-            element.bind("keydown", keydown);
-            scope.keydown = function(evt) {
-                if (evt.which === 27) {
-                    evt.preventDefault();
-                    evt.stopPropagation();
-                    scope.close();
-                } else if (evt.which === 40 && !scope.isOpen) {
-                    scope.isOpen = true;
-                }
-            };
+            }
+            addWatchableAttribute(attrs.min, "min");
+            addWatchableAttribute(attrs.max, "max");
+            if (attrs.showWeeks) {
+                addWatchableAttribute(attrs.showWeeks, "showWeeks", "show-weeks");
+            } else {
+                scope.showWeeks = "show-weeks" in datepickerOptions ? datepickerOptions["show-weeks"] : datepickerConfig.showWeeks;
+                datepickerEl.attr("show-weeks", "showWeeks");
+            }
+            if (attrs.dateDisabled) {
+                datepickerEl.attr("date-disabled", attrs.dateDisabled);
+            }
+            function updatePosition() {
+                scope.position = appendToBody ? $position.offset(element) : $position.position(element);
+                scope.position.top = scope.position.top + element.prop("offsetHeight");
+            }
+            var documentBindingInitialized = false, elementFocusInitialized = false;
             scope.$watch("isOpen", function(value) {
                 if (value) {
-                    scope.$broadcast("datepicker.focus");
-                    scope.position = appendToBody ? $position.offset(element) : $position.position(element);
-                    scope.position.top = scope.position.top + element.prop("offsetHeight");
+                    updatePosition();
                     $document.bind("click", documentClickBind);
+                    if (elementFocusInitialized) {
+                        element.unbind("focus", elementFocusBind);
+                    }
+                    element[0].focus();
+                    documentBindingInitialized = true;
                 } else {
-                    $document.unbind("click", documentClickBind);
+                    if (documentBindingInitialized) {
+                        $document.unbind("click", documentClickBind);
+                    }
+                    element.bind("focus", elementFocusBind);
+                    elementFocusInitialized = true;
+                }
+                if (setIsOpen) {
+                    setIsOpen(originalScope, value);
                 }
             });
-            scope.select = function(date) {
-                if (date === "today") {
-                    var today = new Date();
-                    if (angular.isDate(ngModel.$modelValue)) {
-                        date = new Date(ngModel.$modelValue);
-                        date.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
-                    } else {
-                        date = new Date(today.setHours(0, 0, 0, 0));
-                    }
-                }
-                scope.dateSelection(date);
+            scope.today = function() {
+                scope.dateSelection(new Date());
             };
-            scope.close = function() {
-                scope.isOpen = false;
-                element[0].focus();
+            scope.clear = function() {
+                scope.dateSelection(null);
             };
             var $popup = $compile(popupEl)(scope);
             if (appendToBody) {
@@ -15023,11 +14727,6 @@ angular.module("ui.bootstrap.datepicker", [ "ui.bootstrap.dateparser", "ui.boots
             } else {
                 element.after($popup);
             }
-            scope.$on("$destroy", function() {
-                $popup.remove();
-                element.unbind("keydown", keydown);
-                $document.unbind("click", documentClickBind);
-            });
         }
     };
 } ]).directive("datepickerPopupWrap", function() {
@@ -15045,124 +14744,43 @@ angular.module("ui.bootstrap.datepicker", [ "ui.bootstrap.dateparser", "ui.boots
     };
 });
 
-angular.module("ui.bootstrap.dropdown", []).constant("dropdownConfig", {
-    openClass: "open"
-}).service("dropdownService", [ "$document", function($document) {
-    var openScope = null;
-    this.open = function(dropdownScope) {
-        if (!openScope) {
-            $document.bind("click", closeDropdown);
-            $document.bind("keydown", escapeKeyBind);
-        }
-        if (openScope && openScope !== dropdownScope) {
-            openScope.isOpen = false;
-        }
-        openScope = dropdownScope;
-    };
-    this.close = function(dropdownScope) {
-        if (openScope === dropdownScope) {
-            openScope = null;
-            $document.unbind("click", closeDropdown);
-            $document.unbind("keydown", escapeKeyBind);
-        }
-    };
-    var closeDropdown = function(evt) {
-        if (evt && evt.isDefaultPrevented()) {
-            return;
-        }
-        openScope.$apply(function() {
-            openScope.isOpen = false;
-        });
-    };
-    var escapeKeyBind = function(evt) {
-        if (evt.which === 27) {
-            openScope.focusToggleElement();
-            closeDropdown();
-        }
-    };
-} ]).controller("DropdownController", [ "$scope", "$attrs", "$parse", "dropdownConfig", "dropdownService", "$animate", function($scope, $attrs, $parse, dropdownConfig, dropdownService, $animate) {
-    var self = this, scope = $scope.$new(), openClass = dropdownConfig.openClass, getIsOpen, setIsOpen = angular.noop, toggleInvoker = $attrs.onToggle ? $parse($attrs.onToggle) : angular.noop;
-    this.init = function(element) {
-        self.$element = element;
-        if ($attrs.isOpen) {
-            getIsOpen = $parse($attrs.isOpen);
-            setIsOpen = getIsOpen.assign;
-            $scope.$watch(getIsOpen, function(value) {
-                scope.isOpen = !!value;
-            });
-        }
-    };
-    this.toggle = function(open) {
-        return scope.isOpen = arguments.length ? !!open : !scope.isOpen;
-    };
-    this.isOpen = function() {
-        return scope.isOpen;
-    };
-    scope.focusToggleElement = function() {
-        if (self.toggleElement) {
-            self.toggleElement[0].focus();
-        }
-    };
-    scope.$watch("isOpen", function(isOpen, wasOpen) {
-        $animate[isOpen ? "addClass" : "removeClass"](self.$element, openClass);
-        if (isOpen) {
-            scope.focusToggleElement();
-            dropdownService.open(scope);
-        } else {
-            dropdownService.close(scope);
-        }
-        setIsOpen($scope, isOpen);
-        if (angular.isDefined(isOpen) && isOpen !== wasOpen) {
-            toggleInvoker($scope, {
-                open: !!isOpen
-            });
-        }
-    });
-    $scope.$on("$locationChangeSuccess", function() {
-        scope.isOpen = false;
-    });
-    $scope.$on("$destroy", function() {
-        scope.$destroy();
-    });
-} ]).directive("dropdown", function() {
+angular.module("ui.bootstrap.dropdownToggle", []).directive("dropdownToggle", [ "$document", "$location", function($document, $location) {
+    var openElement = null, closeMenu = angular.noop;
     return {
         restrict: "CA",
-        controller: "DropdownController",
-        link: function(scope, element, attrs, dropdownCtrl) {
-            dropdownCtrl.init(element);
-        }
-    };
-}).directive("dropdownToggle", function() {
-    return {
-        restrict: "CA",
-        require: "?^dropdown",
-        link: function(scope, element, attrs, dropdownCtrl) {
-            if (!dropdownCtrl) {
-                return;
-            }
-            dropdownCtrl.toggleElement = element;
-            var toggleDropdown = function(event) {
+        link: function(scope, element, attrs) {
+            scope.$watch("$location.path", function() {
+                closeMenu();
+            });
+            element.parent().bind("click", function() {
+                closeMenu();
+            });
+            element.bind("click", function(event) {
+                var elementWasOpen = element === openElement;
                 event.preventDefault();
-                if (!element.hasClass("disabled") && !attrs.disabled) {
-                    scope.$apply(function() {
-                        dropdownCtrl.toggle();
-                    });
+                event.stopPropagation();
+                if (!!openElement) {
+                    closeMenu();
                 }
-            };
-            element.bind("click", toggleDropdown);
-            element.attr({
-                "aria-haspopup": true,
-                "aria-expanded": false
-            });
-            scope.$watch(dropdownCtrl.isOpen, function(isOpen) {
-                element.attr("aria-expanded", !!isOpen);
-            });
-            scope.$on("$destroy", function() {
-                element.unbind("click", toggleDropdown);
+                if (!elementWasOpen && !element.hasClass("disabled") && !element.prop("disabled")) {
+                    element.parent().addClass("open");
+                    openElement = element;
+                    closeMenu = function(event) {
+                        if (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
+                        $document.unbind("click", closeMenu);
+                        element.parent().removeClass("open");
+                        closeMenu = angular.noop;
+                        openElement = null;
+                    };
+                    $document.bind("click", closeMenu);
+                }
             });
         }
     };
-});
+} ]);
 
 angular.module("ui.bootstrap.modal", [ "ui.bootstrap.transition" ]).factory("$$stackedMap", function() {
     return {
@@ -15232,12 +14850,9 @@ angular.module("ui.bootstrap.modal", [ "ui.bootstrap.transition" ]).factory("$$s
         },
         replace: true,
         transclude: true,
-        templateUrl: function(tElement, tAttrs) {
-            return tAttrs.templateUrl || "template/modal/window.html";
-        },
+        templateUrl: "template/modal/window.html",
         link: function(scope, element, attrs) {
-            element.addClass(attrs.windowClass || "");
-            scope.size = attrs.size;
+            scope.windowClass = attrs.windowClass || "";
             $timeout(function() {
                 scope.animate = true;
                 element[0].focus();
@@ -15276,11 +14891,8 @@ angular.module("ui.bootstrap.modal", [ "ui.bootstrap.transition" ]).factory("$$s
         var body = $document.find("body").eq(0);
         var modalWindow = openedWindows.get(modalInstance).value;
         openedWindows.remove(modalInstance);
-        removeAfterAnimate(modalWindow.modalDomEl, modalWindow.modalScope, 300, function() {
-            modalWindow.modalScope.$destroy();
-            body.toggleClass(OPENED_MODAL_CLASS, openedWindows.length() > 0);
-            checkRemoveBackdrop();
-        });
+        removeAfterAnimate(modalWindow.modalDomEl, modalWindow.modalScope, 300, checkRemoveBackdrop);
+        body.toggleClass(OPENED_MODAL_CLASS, openedWindows.length() > 0);
     }
     function checkRemoveBackdrop() {
         if (backdropDomEl && backdropIndex() == -1) {
@@ -15322,9 +14934,8 @@ angular.module("ui.bootstrap.modal", [ "ui.bootstrap.transition" ]).factory("$$s
         if (evt.which === 27) {
             modal = openedWindows.top();
             if (modal && modal.value.keyboard) {
-                evt.preventDefault();
                 $rootScope.$apply(function() {
-                    $modalStack.dismiss(modal.key, "escape key press");
+                    $modalStack.dismiss(modal.key);
                 });
             }
         }
@@ -15344,13 +14955,10 @@ angular.module("ui.bootstrap.modal", [ "ui.bootstrap.transition" ]).factory("$$s
             body.append(backdropDomEl);
         }
         var angularDomEl = angular.element("<div modal-window></div>");
-        angularDomEl.attr({
-            "template-url": modal.windowTemplateUrl,
-            "window-class": modal.windowClass,
-            size: modal.size,
-            index: openedWindows.length() - 1,
-            animate: "animate"
-        }).html(modal.content);
+        angularDomEl.attr("window-class", modal.windowClass);
+        angularDomEl.attr("index", openedWindows.length() - 1);
+        angularDomEl.attr("animate", "animate");
+        angularDomEl.html(modal.content);
         var modalDomEl = $compile(angularDomEl)(modal.scope);
         openedWindows.top().value.modalDomEl = modalDomEl;
         body.append(modalDomEl);
@@ -15444,9 +15052,7 @@ angular.module("ui.bootstrap.modal", [ "ui.bootstrap.transition" ]).factory("$$s
                         content: tplAndVars[0],
                         backdrop: modalOptions.backdrop,
                         keyboard: modalOptions.keyboard,
-                        windowClass: modalOptions.windowClass,
-                        windowTemplateUrl: modalOptions.windowTemplateUrl,
-                        size: modalOptions.size
+                        windowClass: modalOptions.windowClass
                     });
                 }, function resolveError(reason) {
                     modalResultDeferred.reject(reason);
@@ -15464,56 +15070,60 @@ angular.module("ui.bootstrap.modal", [ "ui.bootstrap.transition" ]).factory("$$s
     return $modalProvider;
 });
 
-angular.module("ui.bootstrap.pagination", []).controller("PaginationController", [ "$scope", "$attrs", "$parse", function($scope, $attrs, $parse) {
-    var self = this, ngModelCtrl = {
-        $setViewValue: angular.noop
-    }, setNumPages = $attrs.numPages ? $parse($attrs.numPages).assign : angular.noop;
-    this.init = function(ngModelCtrl_, config) {
-        ngModelCtrl = ngModelCtrl_;
-        this.config = config;
-        ngModelCtrl.$render = function() {
-            self.render();
-        };
+angular.module("ui.bootstrap.pagination", []).controller("PaginationController", [ "$scope", "$attrs", "$parse", "$interpolate", function($scope, $attrs, $parse, $interpolate) {
+    var self = this, setNumPages = $attrs.numPages ? $parse($attrs.numPages).assign : angular.noop;
+    this.init = function(defaultItemsPerPage) {
         if ($attrs.itemsPerPage) {
             $scope.$parent.$watch($parse($attrs.itemsPerPage), function(value) {
                 self.itemsPerPage = parseInt(value, 10);
                 $scope.totalPages = self.calculateTotalPages();
             });
         } else {
-            this.itemsPerPage = config.itemsPerPage;
+            this.itemsPerPage = defaultItemsPerPage;
         }
+    };
+    this.noPrevious = function() {
+        return this.page === 1;
+    };
+    this.noNext = function() {
+        return this.page === $scope.totalPages;
+    };
+    this.isActive = function(page) {
+        return this.page === page;
     };
     this.calculateTotalPages = function() {
         var totalPages = this.itemsPerPage < 1 ? 1 : Math.ceil($scope.totalItems / this.itemsPerPage);
         return Math.max(totalPages || 0, 1);
     };
-    this.render = function() {
-        $scope.page = parseInt(ngModelCtrl.$viewValue, 10) || 1;
+    this.getAttributeValue = function(attribute, defaultValue, interpolate) {
+        return angular.isDefined(attribute) ? interpolate ? $interpolate(attribute)($scope.$parent) : $scope.$parent.$eval(attribute) : defaultValue;
     };
-    $scope.selectPage = function(page) {
-        if ($scope.page !== page && page > 0 && page <= $scope.totalPages) {
-            ngModelCtrl.$setViewValue(page);
-            ngModelCtrl.$render();
+    this.render = function() {
+        this.page = parseInt($scope.page, 10) || 1;
+        if (this.page > 0 && this.page <= $scope.totalPages) {
+            $scope.pages = this.getPages(this.page, $scope.totalPages);
         }
     };
-    $scope.getText = function(key) {
-        return $scope[key + "Text"] || self.config[key + "Text"];
+    $scope.selectPage = function(page) {
+        if (!self.isActive(page) && page > 0 && page <= $scope.totalPages) {
+            $scope.page = page;
+            $scope.onSelectPage({
+                page: page
+            });
+        }
     };
-    $scope.noPrevious = function() {
-        return $scope.page === 1;
-    };
-    $scope.noNext = function() {
-        return $scope.page === $scope.totalPages;
-    };
+    $scope.$watch("page", function() {
+        self.render();
+    });
     $scope.$watch("totalItems", function() {
         $scope.totalPages = self.calculateTotalPages();
     });
     $scope.$watch("totalPages", function(value) {
         setNumPages($scope.$parent, value);
-        if ($scope.page > value) {
+        if (self.page > value) {
             $scope.selectPage(value);
         } else {
-            ngModelCtrl.$render();
+            self.render();
         }
     });
 } ]).constant("paginationConfig", {
@@ -15525,43 +15135,35 @@ angular.module("ui.bootstrap.pagination", []).controller("PaginationController",
     nextText: "Next",
     lastText: "Last",
     rotate: true
-}).directive("pagination", [ "$parse", "paginationConfig", function($parse, paginationConfig) {
+}).directive("pagination", [ "$parse", "paginationConfig", function($parse, config) {
     return {
         restrict: "EA",
         scope: {
+            page: "=",
             totalItems: "=",
-            firstText: "@",
-            previousText: "@",
-            nextText: "@",
-            lastText: "@"
+            onSelectPage: " &"
         },
-        require: [ "pagination", "?ngModel" ],
         controller: "PaginationController",
         templateUrl: "template/pagination/pagination.html",
         replace: true,
-        link: function(scope, element, attrs, ctrls) {
-            var paginationCtrl = ctrls[0], ngModelCtrl = ctrls[1];
-            if (!ngModelCtrl) {
-                return;
-            }
-            var maxSize = angular.isDefined(attrs.maxSize) ? scope.$parent.$eval(attrs.maxSize) : paginationConfig.maxSize, rotate = angular.isDefined(attrs.rotate) ? scope.$parent.$eval(attrs.rotate) : paginationConfig.rotate;
-            scope.boundaryLinks = angular.isDefined(attrs.boundaryLinks) ? scope.$parent.$eval(attrs.boundaryLinks) : paginationConfig.boundaryLinks;
-            scope.directionLinks = angular.isDefined(attrs.directionLinks) ? scope.$parent.$eval(attrs.directionLinks) : paginationConfig.directionLinks;
-            paginationCtrl.init(ngModelCtrl, paginationConfig);
+        link: function(scope, element, attrs, paginationCtrl) {
+            var maxSize, boundaryLinks = paginationCtrl.getAttributeValue(attrs.boundaryLinks, config.boundaryLinks), directionLinks = paginationCtrl.getAttributeValue(attrs.directionLinks, config.directionLinks), firstText = paginationCtrl.getAttributeValue(attrs.firstText, config.firstText, true), previousText = paginationCtrl.getAttributeValue(attrs.previousText, config.previousText, true), nextText = paginationCtrl.getAttributeValue(attrs.nextText, config.nextText, true), lastText = paginationCtrl.getAttributeValue(attrs.lastText, config.lastText, true), rotate = paginationCtrl.getAttributeValue(attrs.rotate, config.rotate);
+            paginationCtrl.init(config.itemsPerPage);
             if (attrs.maxSize) {
                 scope.$parent.$watch($parse(attrs.maxSize), function(value) {
                     maxSize = parseInt(value, 10);
                     paginationCtrl.render();
                 });
             }
-            function makePage(number, text, isActive) {
+            function makePage(number, text, isActive, isDisabled) {
                 return {
                     number: number,
                     text: text,
-                    active: isActive
+                    active: isActive,
+                    disabled: isDisabled
                 };
             }
-            function getPages(currentPage, totalPages) {
+            paginationCtrl.getPages = function(currentPage, totalPages) {
                 var pages = [];
                 var startPage = 1, endPage = totalPages;
                 var isMaxSized = angular.isDefined(maxSize) && maxSize < totalPages;
@@ -15579,27 +15181,32 @@ angular.module("ui.bootstrap.pagination", []).controller("PaginationController",
                     }
                 }
                 for (var number = startPage; number <= endPage; number++) {
-                    var page = makePage(number, number, number === currentPage);
+                    var page = makePage(number, number, paginationCtrl.isActive(number), false);
                     pages.push(page);
                 }
                 if (isMaxSized && !rotate) {
                     if (startPage > 1) {
-                        var previousPageSet = makePage(startPage - 1, "...", false);
+                        var previousPageSet = makePage(startPage - 1, "...", false, false);
                         pages.unshift(previousPageSet);
                     }
                     if (endPage < totalPages) {
-                        var nextPageSet = makePage(endPage + 1, "...", false);
+                        var nextPageSet = makePage(endPage + 1, "...", false, false);
                         pages.push(nextPageSet);
                     }
                 }
-                return pages;
-            }
-            var originalRender = paginationCtrl.render;
-            paginationCtrl.render = function() {
-                originalRender();
-                if (scope.page > 0 && scope.page <= scope.totalPages) {
-                    scope.pages = getPages(scope.page, scope.totalPages);
+                if (directionLinks) {
+                    var previousPage = makePage(currentPage - 1, previousText, false, paginationCtrl.noPrevious());
+                    pages.unshift(previousPage);
+                    var nextPage = makePage(currentPage + 1, nextText, false, paginationCtrl.noNext());
+                    pages.push(nextPage);
                 }
+                if (boundaryLinks) {
+                    var firstPage = makePage(1, firstText, false, paginationCtrl.noPrevious());
+                    pages.unshift(firstPage);
+                    var lastPage = makePage(totalPages, lastText, false, paginationCtrl.noNext());
+                    pages.push(lastPage);
+                }
+                return pages;
             };
         }
     };
@@ -15608,25 +15215,32 @@ angular.module("ui.bootstrap.pagination", []).controller("PaginationController",
     previousText: "« Previous",
     nextText: "Next »",
     align: true
-}).directive("pager", [ "pagerConfig", function(pagerConfig) {
+}).directive("pager", [ "pagerConfig", function(config) {
     return {
         restrict: "EA",
         scope: {
+            page: "=",
             totalItems: "=",
-            previousText: "@",
-            nextText: "@"
+            onSelectPage: " &"
         },
-        require: [ "pager", "?ngModel" ],
         controller: "PaginationController",
         templateUrl: "template/pagination/pager.html",
         replace: true,
-        link: function(scope, element, attrs, ctrls) {
-            var paginationCtrl = ctrls[0], ngModelCtrl = ctrls[1];
-            if (!ngModelCtrl) {
-                return;
+        link: function(scope, element, attrs, paginationCtrl) {
+            var previousText = paginationCtrl.getAttributeValue(attrs.previousText, config.previousText, true), nextText = paginationCtrl.getAttributeValue(attrs.nextText, config.nextText, true), align = paginationCtrl.getAttributeValue(attrs.align, config.align);
+            paginationCtrl.init(config.itemsPerPage);
+            function makePage(number, text, isDisabled, isPrevious, isNext) {
+                return {
+                    number: number,
+                    text: text,
+                    disabled: isDisabled,
+                    previous: align && isPrevious,
+                    next: align && isNext
+                };
             }
-            scope.align = angular.isDefined(attrs.align) ? scope.$parent.$eval(attrs.align) : pagerConfig.align;
-            paginationCtrl.init(ngModelCtrl, pagerConfig);
+            paginationCtrl.getPages = function(currentPage) {
+                return [ makePage(currentPage - 1, previousText, paginationCtrl.noPrevious(), true, false), makePage(currentPage + 1, nextText, paginationCtrl.noNext(), false, true) ];
+            };
         }
     };
 } ]);
@@ -15682,9 +15296,42 @@ angular.module("ui.bootstrap.tooltip", [ "ui.bootstrap.position", "ui.bootstrap.
                         var popupTimeout;
                         var appendToBody = angular.isDefined(options.appendToBody) ? options.appendToBody : false;
                         var triggers = getTriggers(undefined);
+                        var hasRegisteredTriggers = false;
                         var hasEnableExp = angular.isDefined(attrs[prefix + "Enable"]);
                         var positionTooltip = function() {
-                            var ttPosition = $position.positionElements(element, tooltip, scope.tt_placement, appendToBody);
+                            var position, ttWidth, ttHeight, ttPosition;
+                            position = appendToBody ? $position.offset(element) : $position.position(element);
+                            ttWidth = tooltip.prop("offsetWidth");
+                            ttHeight = tooltip.prop("offsetHeight");
+                            switch (scope.tt_placement) {
+                              case "right":
+                                ttPosition = {
+                                    top: position.top + position.height / 2 - ttHeight / 2,
+                                    left: position.left + position.width
+                                };
+                                break;
+
+                              case "bottom":
+                                ttPosition = {
+                                    top: position.top + position.height,
+                                    left: position.left + position.width / 2 - ttWidth / 2
+                                };
+                                break;
+
+                              case "left":
+                                ttPosition = {
+                                    top: position.top + position.height / 2 - ttHeight / 2,
+                                    left: position.left - ttWidth
+                                };
+                                break;
+
+                              default:
+                                ttPosition = {
+                                    top: position.top - ttHeight,
+                                    left: position.left + position.width / 2 - ttWidth / 2
+                                };
+                                break;
+                            }
                             ttPosition.top += "px";
                             ttPosition.left += "px";
                             tooltip.css(ttPosition);
@@ -15702,12 +15349,10 @@ angular.module("ui.bootstrap.tooltip", [ "ui.bootstrap.position", "ui.bootstrap.
                                 return;
                             }
                             if (scope.tt_popupDelay) {
-                                if (!popupTimeout) {
-                                    popupTimeout = $timeout(show, scope.tt_popupDelay, false);
-                                    popupTimeout.then(function(reposition) {
-                                        reposition();
-                                    });
-                                }
+                                popupTimeout = $timeout(show, scope.tt_popupDelay, false);
+                                popupTimeout.then(function(reposition) {
+                                    reposition();
+                                });
                             } else {
                                 show()();
                             }
@@ -15718,15 +15363,13 @@ angular.module("ui.bootstrap.tooltip", [ "ui.bootstrap.position", "ui.bootstrap.
                             });
                         }
                         function show() {
-                            popupTimeout = null;
-                            if (transitionTimeout) {
-                                $timeout.cancel(transitionTimeout);
-                                transitionTimeout = null;
-                            }
                             if (!scope.tt_content) {
                                 return angular.noop;
                             }
                             createTooltip();
+                            if (transitionTimeout) {
+                                $timeout.cancel(transitionTimeout);
+                            }
                             tooltip.css({
                                 top: 0,
                                 left: 0,
@@ -15745,11 +15388,8 @@ angular.module("ui.bootstrap.tooltip", [ "ui.bootstrap.position", "ui.bootstrap.
                         function hide() {
                             scope.tt_isOpen = false;
                             $timeout.cancel(popupTimeout);
-                            popupTimeout = null;
                             if (scope.tt_animation) {
-                                if (!transitionTimeout) {
-                                    transitionTimeout = $timeout(removeTooltip, 500);
-                                }
+                                transitionTimeout = $timeout(removeTooltip, 500);
                             } else {
                                 removeTooltip();
                             }
@@ -15762,7 +15402,6 @@ angular.module("ui.bootstrap.tooltip", [ "ui.bootstrap.position", "ui.bootstrap.
                             scope.$digest();
                         }
                         function removeTooltip() {
-                            transitionTimeout = null;
                             if (tooltip) {
                                 tooltip.remove();
                                 tooltip = null;
@@ -15785,8 +15424,10 @@ angular.module("ui.bootstrap.tooltip", [ "ui.bootstrap.position", "ui.bootstrap.
                             scope.tt_popupDelay = !isNaN(delay) ? delay : options.popupDelay;
                         });
                         var unregisterTriggers = function() {
-                            element.unbind(triggers.show, showTooltipBind);
-                            element.unbind(triggers.hide, hideTooltipBind);
+                            if (hasRegisteredTriggers) {
+                                element.unbind(triggers.show, showTooltipBind);
+                                element.unbind(triggers.hide, hideTooltipBind);
+                            }
                         };
                         attrs.$observe(prefix + "Trigger", function(val) {
                             unregisterTriggers();
@@ -15797,6 +15438,7 @@ angular.module("ui.bootstrap.tooltip", [ "ui.bootstrap.position", "ui.bootstrap.
                                 element.bind(triggers.show, showTooltipBind);
                                 element.bind(triggers.hide, hideTooltipBind);
                             }
+                            hasRegisteredTriggers = true;
                         });
                         var animation = scope.$eval(attrs[prefix + "Animation"]);
                         scope.tt_animation = angular.isDefined(animation) ? !!animation : options.animation;
@@ -15868,30 +15510,46 @@ angular.module("ui.bootstrap.popover", [ "ui.bootstrap.tooltip" ]).directive("po
     return $tooltip("popover", "popover", "click");
 } ]);
 
-angular.module("ui.bootstrap.progressbar", []).constant("progressConfig", {
+angular.module("ui.bootstrap.progressbar", [ "ui.bootstrap.transition" ]).constant("progressConfig", {
     animate: true,
     max: 100
-}).controller("ProgressController", [ "$scope", "$attrs", "progressConfig", function($scope, $attrs, progressConfig) {
-    var self = this, animate = angular.isDefined($attrs.animate) ? $scope.$parent.$eval($attrs.animate) : progressConfig.animate;
-    this.bars = [];
-    $scope.max = angular.isDefined($attrs.max) ? $scope.$parent.$eval($attrs.max) : progressConfig.max;
+}).controller("ProgressController", [ "$scope", "$attrs", "progressConfig", "$transition", function($scope, $attrs, progressConfig, $transition) {
+    var self = this, bars = [], max = angular.isDefined($attrs.max) ? $scope.$parent.$eval($attrs.max) : progressConfig.max, animate = angular.isDefined($attrs.animate) ? $scope.$parent.$eval($attrs.animate) : progressConfig.animate;
     this.addBar = function(bar, element) {
-        if (!animate) {
-            element.css({
-                transition: "none"
-            });
+        var oldValue = 0, index = bar.$parent.$index;
+        if (angular.isDefined(index) && bars[index]) {
+            oldValue = bars[index].value;
         }
-        this.bars.push(bar);
-        bar.$watch("value", function(value) {
-            bar.percent = +(100 * value / $scope.max).toFixed(2);
+        bars.push(bar);
+        this.update(element, bar.value, oldValue);
+        bar.$watch("value", function(value, oldValue) {
+            if (value !== oldValue) {
+                self.update(element, value, oldValue);
+            }
         });
         bar.$on("$destroy", function() {
-            element = null;
             self.removeBar(bar);
         });
     };
+    this.update = function(element, newValue, oldValue) {
+        var percent = this.getPercentage(newValue);
+        if (animate) {
+            element.css("width", this.getPercentage(oldValue) + "%");
+            $transition(element, {
+                width: percent + "%"
+            });
+        } else {
+            element.css({
+                transition: "none",
+                width: percent + "%"
+            });
+        }
+    };
     this.removeBar = function(bar) {
-        this.bars.splice(this.bars.indexOf(bar), 1);
+        bars.splice(bars.indexOf(bar), 1);
+    };
+    this.getPercentage = function(value) {
+        return Math.round(100 * value / max);
     };
 } ]).directive("progress", function() {
     return {
@@ -15901,7 +15559,7 @@ angular.module("ui.bootstrap.progressbar", []).constant("progressConfig", {
         controller: "ProgressController",
         require: "progress",
         scope: {},
-        templateUrl: "template/progressbar/progress.html"
+        template: '<div class="progress" ng-transclude></div>'
     };
 }).directive("bar", function() {
     return {
@@ -15939,95 +15597,74 @@ angular.module("ui.bootstrap.rating", []).constant("ratingConfig", {
     max: 5,
     stateOn: null,
     stateOff: null
-}).controller("RatingController", [ "$scope", "$attrs", "ratingConfig", function($scope, $attrs, ratingConfig) {
-    var ngModelCtrl = {
-        $setViewValue: angular.noop
-    };
-    this.init = function(ngModelCtrl_) {
-        ngModelCtrl = ngModelCtrl_;
-        ngModelCtrl.$render = this.render;
-        this.stateOn = angular.isDefined($attrs.stateOn) ? $scope.$parent.$eval($attrs.stateOn) : ratingConfig.stateOn;
-        this.stateOff = angular.isDefined($attrs.stateOff) ? $scope.$parent.$eval($attrs.stateOff) : ratingConfig.stateOff;
-        var ratingStates = angular.isDefined($attrs.ratingStates) ? $scope.$parent.$eval($attrs.ratingStates) : new Array(angular.isDefined($attrs.max) ? $scope.$parent.$eval($attrs.max) : ratingConfig.max);
-        $scope.range = this.buildTemplateObjects(ratingStates);
-    };
-    this.buildTemplateObjects = function(states) {
+}).controller("RatingController", [ "$scope", "$attrs", "$parse", "ratingConfig", function($scope, $attrs, $parse, ratingConfig) {
+    this.maxRange = angular.isDefined($attrs.max) ? $scope.$parent.$eval($attrs.max) : ratingConfig.max;
+    this.stateOn = angular.isDefined($attrs.stateOn) ? $scope.$parent.$eval($attrs.stateOn) : ratingConfig.stateOn;
+    this.stateOff = angular.isDefined($attrs.stateOff) ? $scope.$parent.$eval($attrs.stateOff) : ratingConfig.stateOff;
+    this.createRateObjects = function(states) {
+        var defaultOptions = {
+            stateOn: this.stateOn,
+            stateOff: this.stateOff
+        };
         for (var i = 0, n = states.length; i < n; i++) {
             states[i] = angular.extend({
                 index: i
-            }, {
-                stateOn: this.stateOn,
-                stateOff: this.stateOff
-            }, states[i]);
+            }, defaultOptions, states[i]);
         }
         return states;
     };
+    $scope.range = angular.isDefined($attrs.ratingStates) ? this.createRateObjects(angular.copy($scope.$parent.$eval($attrs.ratingStates))) : this.createRateObjects(new Array(this.maxRange));
     $scope.rate = function(value) {
-        if (!$scope.readonly && value >= 0 && value <= $scope.range.length) {
-            ngModelCtrl.$setViewValue(value);
-            ngModelCtrl.$render();
+        if ($scope.value !== value && !$scope.readonly) {
+            $scope.value = value;
         }
     };
     $scope.enter = function(value) {
         if (!$scope.readonly) {
-            $scope.value = value;
+            $scope.val = value;
         }
         $scope.onHover({
             value: value
         });
     };
     $scope.reset = function() {
-        $scope.value = ngModelCtrl.$viewValue;
+        $scope.val = angular.copy($scope.value);
         $scope.onLeave();
     };
-    $scope.onKeydown = function(evt) {
-        if (/(37|38|39|40)/.test(evt.which)) {
-            evt.preventDefault();
-            evt.stopPropagation();
-            $scope.rate($scope.value + (evt.which === 38 || evt.which === 39 ? 1 : -1));
-        }
-    };
-    this.render = function() {
-        $scope.value = ngModelCtrl.$viewValue;
-    };
+    $scope.$watch("value", function(value) {
+        $scope.val = value;
+    });
+    $scope.readonly = false;
+    if ($attrs.readonly) {
+        $scope.$parent.$watch($parse($attrs.readonly), function(value) {
+            $scope.readonly = !!value;
+        });
+    }
 } ]).directive("rating", function() {
     return {
         restrict: "EA",
-        require: [ "rating", "ngModel" ],
         scope: {
-            readonly: "=?",
+            value: "=",
             onHover: "&",
             onLeave: "&"
         },
         controller: "RatingController",
         templateUrl: "template/rating/rating.html",
-        replace: true,
-        link: function(scope, element, attrs, ctrls) {
-            var ratingCtrl = ctrls[0], ngModelCtrl = ctrls[1];
-            if (ngModelCtrl) {
-                ratingCtrl.init(ngModelCtrl);
-            }
-        }
+        replace: true
     };
 });
 
 angular.module("ui.bootstrap.tabs", []).controller("TabsetController", [ "$scope", function TabsetCtrl($scope) {
     var ctrl = this, tabs = ctrl.tabs = $scope.tabs = [];
-    ctrl.select = function(selectedTab) {
+    ctrl.select = function(tab) {
         angular.forEach(tabs, function(tab) {
-            if (tab.active && tab !== selectedTab) {
-                tab.active = false;
-                tab.onDeselect();
-            }
+            tab.active = false;
         });
-        selectedTab.active = true;
-        selectedTab.onSelect();
+        tab.active = true;
     };
     ctrl.addTab = function addTab(tab) {
         tabs.push(tab);
-        if (tabs.length === 1) {
-            tab.active = true;
-        } else if (tab.active) {
+        if (tabs.length === 1 || tab.active) {
             ctrl.select(tab);
         }
     };
@@ -16044,14 +15681,13 @@ angular.module("ui.bootstrap.tabs", []).controller("TabsetController", [ "$scope
         restrict: "EA",
         transclude: true,
         replace: true,
-        scope: {
-            type: "@"
-        },
+        scope: {},
         controller: "TabsetController",
         templateUrl: "template/tabs/tabset.html",
         link: function(scope, element, attrs) {
             scope.vertical = angular.isDefined(attrs.vertical) ? scope.$parent.$eval(attrs.vertical) : false;
             scope.justified = angular.isDefined(attrs.justified) ? scope.$parent.$eval(attrs.justified) : false;
+            scope.type = angular.isDefined(attrs.type) ? scope.$parent.$eval(attrs.type) : "tabs";
         }
     };
 }).directive("tab", [ "$parse", function($parse) {
@@ -16062,7 +15698,6 @@ angular.module("ui.bootstrap.tabs", []).controller("TabsetController", [ "$scope
         templateUrl: "template/tabs/tab.html",
         transclude: true,
         scope: {
-            active: "=?",
             heading: "@",
             onSelect: "&select",
             onDeselect: "&deselect"
@@ -16070,9 +15705,26 @@ angular.module("ui.bootstrap.tabs", []).controller("TabsetController", [ "$scope
         controller: function() {},
         compile: function(elm, attrs, transclude) {
             return function postLink(scope, elm, attrs, tabsetCtrl) {
+                var getActive, setActive;
+                if (attrs.active) {
+                    getActive = $parse(attrs.active);
+                    setActive = getActive.assign;
+                    scope.$parent.$watch(getActive, function updateActive(value, oldVal) {
+                        if (value !== oldVal) {
+                            scope.active = !!value;
+                        }
+                    });
+                    scope.active = getActive(scope.$parent);
+                } else {
+                    setActive = getActive = angular.noop;
+                }
                 scope.$watch("active", function(active) {
+                    setActive(scope.$parent, active);
                     if (active) {
                         tabsetCtrl.select(scope);
+                        scope.onSelect();
+                    } else {
+                        scope.onDeselect();
                     }
                 });
                 scope.disabled = false;
@@ -16136,213 +15788,198 @@ angular.module("ui.bootstrap.timepicker", []).constant("timepickerConfig", {
     meridians: null,
     readonlyInput: false,
     mousewheel: true
-}).controller("TimepickerController", [ "$scope", "$attrs", "$parse", "$log", "$locale", "timepickerConfig", function($scope, $attrs, $parse, $log, $locale, timepickerConfig) {
-    var selected = new Date(), ngModelCtrl = {
-        $setViewValue: angular.noop
-    }, meridians = angular.isDefined($attrs.meridians) ? $scope.$parent.$eval($attrs.meridians) : timepickerConfig.meridians || $locale.DATETIME_FORMATS.AMPMS;
-    this.init = function(ngModelCtrl_, inputs) {
-        ngModelCtrl = ngModelCtrl_;
-        ngModelCtrl.$render = this.render;
-        var hoursInputEl = inputs.eq(0), minutesInputEl = inputs.eq(1);
-        var mousewheel = angular.isDefined($attrs.mousewheel) ? $scope.$parent.$eval($attrs.mousewheel) : timepickerConfig.mousewheel;
-        if (mousewheel) {
-            this.setupMousewheelEvents(hoursInputEl, minutesInputEl);
-        }
-        $scope.readonlyInput = angular.isDefined($attrs.readonlyInput) ? $scope.$parent.$eval($attrs.readonlyInput) : timepickerConfig.readonlyInput;
-        this.setupInputEvents(hoursInputEl, minutesInputEl);
-    };
-    var hourStep = timepickerConfig.hourStep;
-    if ($attrs.hourStep) {
-        $scope.$parent.$watch($parse($attrs.hourStep), function(value) {
-            hourStep = parseInt(value, 10);
-        });
-    }
-    var minuteStep = timepickerConfig.minuteStep;
-    if ($attrs.minuteStep) {
-        $scope.$parent.$watch($parse($attrs.minuteStep), function(value) {
-            minuteStep = parseInt(value, 10);
-        });
-    }
-    $scope.showMeridian = timepickerConfig.showMeridian;
-    if ($attrs.showMeridian) {
-        $scope.$parent.$watch($parse($attrs.showMeridian), function(value) {
-            $scope.showMeridian = !!value;
-            if (ngModelCtrl.$error.time) {
-                var hours = getHoursFromTemplate(), minutes = getMinutesFromTemplate();
-                if (angular.isDefined(hours) && angular.isDefined(minutes)) {
-                    selected.setHours(hours);
-                    refresh();
-                }
-            } else {
-                updateTemplate();
-            }
-        });
-    }
-    function getHoursFromTemplate() {
-        var hours = parseInt($scope.hours, 10);
-        var valid = $scope.showMeridian ? hours > 0 && hours < 13 : hours >= 0 && hours < 24;
-        if (!valid) {
-            return undefined;
-        }
-        if ($scope.showMeridian) {
-            if (hours === 12) {
-                hours = 0;
-            }
-            if ($scope.meridian === meridians[1]) {
-                hours = hours + 12;
-            }
-        }
-        return hours;
-    }
-    function getMinutesFromTemplate() {
-        var minutes = parseInt($scope.minutes, 10);
-        return minutes >= 0 && minutes < 60 ? minutes : undefined;
-    }
-    function pad(value) {
-        return angular.isDefined(value) && value.toString().length < 2 ? "0" + value : value;
-    }
-    this.setupMousewheelEvents = function(hoursInputEl, minutesInputEl) {
-        var isScrollingUp = function(e) {
-            if (e.originalEvent) {
-                e = e.originalEvent;
-            }
-            var delta = e.wheelDelta ? e.wheelDelta : -e.deltaY;
-            return e.detail || delta > 0;
-        };
-        hoursInputEl.bind("mousewheel wheel", function(e) {
-            $scope.$apply(isScrollingUp(e) ? $scope.incrementHours() : $scope.decrementHours());
-            e.preventDefault();
-        });
-        minutesInputEl.bind("mousewheel wheel", function(e) {
-            $scope.$apply(isScrollingUp(e) ? $scope.incrementMinutes() : $scope.decrementMinutes());
-            e.preventDefault();
-        });
-    };
-    this.setupInputEvents = function(hoursInputEl, minutesInputEl) {
-        if ($scope.readonlyInput) {
-            $scope.updateHours = angular.noop;
-            $scope.updateMinutes = angular.noop;
-            return;
-        }
-        var invalidate = function(invalidHours, invalidMinutes) {
-            ngModelCtrl.$setViewValue(null);
-            ngModelCtrl.$setValidity("time", false);
-            if (angular.isDefined(invalidHours)) {
-                $scope.invalidHours = invalidHours;
-            }
-            if (angular.isDefined(invalidMinutes)) {
-                $scope.invalidMinutes = invalidMinutes;
-            }
-        };
-        $scope.updateHours = function() {
-            var hours = getHoursFromTemplate();
-            if (angular.isDefined(hours)) {
-                selected.setHours(hours);
-                refresh("h");
-            } else {
-                invalidate(true);
-            }
-        };
-        hoursInputEl.bind("blur", function(e) {
-            if (!$scope.invalidHours && $scope.hours < 10) {
-                $scope.$apply(function() {
-                    $scope.hours = pad($scope.hours);
-                });
-            }
-        });
-        $scope.updateMinutes = function() {
-            var minutes = getMinutesFromTemplate();
-            if (angular.isDefined(minutes)) {
-                selected.setMinutes(minutes);
-                refresh("m");
-            } else {
-                invalidate(undefined, true);
-            }
-        };
-        minutesInputEl.bind("blur", function(e) {
-            if (!$scope.invalidMinutes && $scope.minutes < 10) {
-                $scope.$apply(function() {
-                    $scope.minutes = pad($scope.minutes);
-                });
-            }
-        });
-    };
-    this.render = function() {
-        var date = ngModelCtrl.$modelValue ? new Date(ngModelCtrl.$modelValue) : null;
-        if (isNaN(date)) {
-            ngModelCtrl.$setValidity("time", false);
-            $log.error('Timepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
-        } else {
-            if (date) {
-                selected = date;
-            }
-            makeValid();
-            updateTemplate();
-        }
-    };
-    function refresh(keyboardChange) {
-        makeValid();
-        ngModelCtrl.$setViewValue(new Date(selected));
-        updateTemplate(keyboardChange);
-    }
-    function makeValid() {
-        ngModelCtrl.$setValidity("time", true);
-        $scope.invalidHours = false;
-        $scope.invalidMinutes = false;
-    }
-    function updateTemplate(keyboardChange) {
-        var hours = selected.getHours(), minutes = selected.getMinutes();
-        if ($scope.showMeridian) {
-            hours = hours === 0 || hours === 12 ? 12 : hours % 12;
-        }
-        $scope.hours = keyboardChange === "h" ? hours : pad(hours);
-        $scope.minutes = keyboardChange === "m" ? minutes : pad(minutes);
-        $scope.meridian = selected.getHours() < 12 ? meridians[0] : meridians[1];
-    }
-    function addMinutes(minutes) {
-        var dt = new Date(selected.getTime() + minutes * 6e4);
-        selected.setHours(dt.getHours(), dt.getMinutes());
-        refresh();
-    }
-    $scope.incrementHours = function() {
-        addMinutes(hourStep * 60);
-    };
-    $scope.decrementHours = function() {
-        addMinutes(-hourStep * 60);
-    };
-    $scope.incrementMinutes = function() {
-        addMinutes(minuteStep);
-    };
-    $scope.decrementMinutes = function() {
-        addMinutes(-minuteStep);
-    };
-    $scope.toggleMeridian = function() {
-        addMinutes(12 * 60 * (selected.getHours() < 12 ? 1 : -1));
-    };
-} ]).directive("timepicker", function() {
+}).directive("timepicker", [ "$parse", "$log", "timepickerConfig", "$locale", function($parse, $log, timepickerConfig, $locale) {
     return {
         restrict: "EA",
-        require: [ "timepicker", "?^ngModel" ],
-        controller: "TimepickerController",
+        require: "?^ngModel",
         replace: true,
         scope: {},
         templateUrl: "template/timepicker/timepicker.html",
-        link: function(scope, element, attrs, ctrls) {
-            var timepickerCtrl = ctrls[0], ngModelCtrl = ctrls[1];
-            if (ngModelCtrl) {
-                timepickerCtrl.init(ngModelCtrl, element.find("input"));
+        link: function(scope, element, attrs, ngModel) {
+            if (!ngModel) {
+                return;
             }
+            var selected = new Date(), meridians = angular.isDefined(attrs.meridians) ? scope.$parent.$eval(attrs.meridians) : timepickerConfig.meridians || $locale.DATETIME_FORMATS.AMPMS;
+            var hourStep = timepickerConfig.hourStep;
+            if (attrs.hourStep) {
+                scope.$parent.$watch($parse(attrs.hourStep), function(value) {
+                    hourStep = parseInt(value, 10);
+                });
+            }
+            var minuteStep = timepickerConfig.minuteStep;
+            if (attrs.minuteStep) {
+                scope.$parent.$watch($parse(attrs.minuteStep), function(value) {
+                    minuteStep = parseInt(value, 10);
+                });
+            }
+            scope.showMeridian = timepickerConfig.showMeridian;
+            if (attrs.showMeridian) {
+                scope.$parent.$watch($parse(attrs.showMeridian), function(value) {
+                    scope.showMeridian = !!value;
+                    if (ngModel.$error.time) {
+                        var hours = getHoursFromTemplate(), minutes = getMinutesFromTemplate();
+                        if (angular.isDefined(hours) && angular.isDefined(minutes)) {
+                            selected.setHours(hours);
+                            refresh();
+                        }
+                    } else {
+                        updateTemplate();
+                    }
+                });
+            }
+            function getHoursFromTemplate() {
+                var hours = parseInt(scope.hours, 10);
+                var valid = scope.showMeridian ? hours > 0 && hours < 13 : hours >= 0 && hours < 24;
+                if (!valid) {
+                    return undefined;
+                }
+                if (scope.showMeridian) {
+                    if (hours === 12) {
+                        hours = 0;
+                    }
+                    if (scope.meridian === meridians[1]) {
+                        hours = hours + 12;
+                    }
+                }
+                return hours;
+            }
+            function getMinutesFromTemplate() {
+                var minutes = parseInt(scope.minutes, 10);
+                return minutes >= 0 && minutes < 60 ? minutes : undefined;
+            }
+            function pad(value) {
+                return angular.isDefined(value) && value.toString().length < 2 ? "0" + value : value;
+            }
+            var inputs = element.find("input"), hoursInputEl = inputs.eq(0), minutesInputEl = inputs.eq(1);
+            var mousewheel = angular.isDefined(attrs.mousewheel) ? scope.$eval(attrs.mousewheel) : timepickerConfig.mousewheel;
+            if (mousewheel) {
+                var isScrollingUp = function(e) {
+                    if (e.originalEvent) {
+                        e = e.originalEvent;
+                    }
+                    var delta = e.wheelDelta ? e.wheelDelta : -e.deltaY;
+                    return e.detail || delta > 0;
+                };
+                hoursInputEl.bind("mousewheel wheel", function(e) {
+                    scope.$apply(isScrollingUp(e) ? scope.incrementHours() : scope.decrementHours());
+                    e.preventDefault();
+                });
+                minutesInputEl.bind("mousewheel wheel", function(e) {
+                    scope.$apply(isScrollingUp(e) ? scope.incrementMinutes() : scope.decrementMinutes());
+                    e.preventDefault();
+                });
+            }
+            scope.readonlyInput = angular.isDefined(attrs.readonlyInput) ? scope.$eval(attrs.readonlyInput) : timepickerConfig.readonlyInput;
+            if (!scope.readonlyInput) {
+                var invalidate = function(invalidHours, invalidMinutes) {
+                    ngModel.$setViewValue(null);
+                    ngModel.$setValidity("time", false);
+                    if (angular.isDefined(invalidHours)) {
+                        scope.invalidHours = invalidHours;
+                    }
+                    if (angular.isDefined(invalidMinutes)) {
+                        scope.invalidMinutes = invalidMinutes;
+                    }
+                };
+                scope.updateHours = function() {
+                    var hours = getHoursFromTemplate();
+                    if (angular.isDefined(hours)) {
+                        selected.setHours(hours);
+                        refresh("h");
+                    } else {
+                        invalidate(true);
+                    }
+                };
+                hoursInputEl.bind("blur", function(e) {
+                    if (!scope.validHours && scope.hours < 10) {
+                        scope.$apply(function() {
+                            scope.hours = pad(scope.hours);
+                        });
+                    }
+                });
+                scope.updateMinutes = function() {
+                    var minutes = getMinutesFromTemplate();
+                    if (angular.isDefined(minutes)) {
+                        selected.setMinutes(minutes);
+                        refresh("m");
+                    } else {
+                        invalidate(undefined, true);
+                    }
+                };
+                minutesInputEl.bind("blur", function(e) {
+                    if (!scope.invalidMinutes && scope.minutes < 10) {
+                        scope.$apply(function() {
+                            scope.minutes = pad(scope.minutes);
+                        });
+                    }
+                });
+            } else {
+                scope.updateHours = angular.noop;
+                scope.updateMinutes = angular.noop;
+            }
+            ngModel.$render = function() {
+                var date = ngModel.$modelValue ? new Date(ngModel.$modelValue) : null;
+                if (isNaN(date)) {
+                    ngModel.$setValidity("time", false);
+                    $log.error('Timepicker directive: "ng-model" value must be a Date object, a number of milliseconds since 01.01.1970 or a string representing an RFC2822 or ISO 8601 date.');
+                } else {
+                    if (date) {
+                        selected = date;
+                    }
+                    makeValid();
+                    updateTemplate();
+                }
+            };
+            function refresh(keyboardChange) {
+                makeValid();
+                ngModel.$setViewValue(new Date(selected));
+                updateTemplate(keyboardChange);
+            }
+            function makeValid() {
+                ngModel.$setValidity("time", true);
+                scope.invalidHours = false;
+                scope.invalidMinutes = false;
+            }
+            function updateTemplate(keyboardChange) {
+                var hours = selected.getHours(), minutes = selected.getMinutes();
+                if (scope.showMeridian) {
+                    hours = hours === 0 || hours === 12 ? 12 : hours % 12;
+                }
+                scope.hours = keyboardChange === "h" ? hours : pad(hours);
+                scope.minutes = keyboardChange === "m" ? minutes : pad(minutes);
+                scope.meridian = selected.getHours() < 12 ? meridians[0] : meridians[1];
+            }
+            function addMinutes(minutes) {
+                var dt = new Date(selected.getTime() + minutes * 6e4);
+                selected.setHours(dt.getHours(), dt.getMinutes());
+                refresh();
+            }
+            scope.incrementHours = function() {
+                addMinutes(hourStep * 60);
+            };
+            scope.decrementHours = function() {
+                addMinutes(-hourStep * 60);
+            };
+            scope.incrementMinutes = function() {
+                addMinutes(minuteStep);
+            };
+            scope.decrementMinutes = function() {
+                addMinutes(-minuteStep);
+            };
+            scope.toggleMeridian = function() {
+                addMinutes(12 * 60 * (selected.getHours() < 12 ? 1 : -1));
+            };
         }
     };
-});
+} ]);
 
 angular.module("ui.bootstrap.typeahead", [ "ui.bootstrap.position", "ui.bootstrap.bindHtml" ]).factory("typeaheadParser", [ "$parse", function($parse) {
     var TYPEAHEAD_REGEXP = /^\s*(.*?)(?:\s+as\s+(.*?))?\s+for\s+(?:([\$\w][\$\w\d]*))\s+in\s+(.*)$/;
     return {
         parse: function(input) {
-            var match = input.match(TYPEAHEAD_REGEXP);
+            var match = input.match(TYPEAHEAD_REGEXP), modelMapper, viewMapper, source;
             if (!match) {
-                throw new Error('Expected typeahead specification in form of "_modelValue_ (as _label_)? for _item_ in _collection_"' + ' but got "' + input + '".');
+                throw new Error("Expected typeahead specification in form of '_modelValue_ (as _label_)? for _item_ in _collection_'" + " but got '" + input + "'.");
             }
             return {
                 itemName: match[3],
@@ -16363,23 +16000,12 @@ angular.module("ui.bootstrap.typeahead", [ "ui.bootstrap.position", "ui.bootstra
             var isLoadingSetter = $parse(attrs.typeaheadLoading).assign || angular.noop;
             var onSelectCallback = $parse(attrs.typeaheadOnSelect);
             var inputFormatter = attrs.typeaheadInputFormatter ? $parse(attrs.typeaheadInputFormatter) : undefined;
-            var appendToBody = attrs.typeaheadAppendToBody ? originalScope.$eval(attrs.typeaheadAppendToBody) : false;
+            var appendToBody = attrs.typeaheadAppendToBody ? $parse(attrs.typeaheadAppendToBody) : false;
             var $setModelValue = $parse(attrs.ngModel).assign;
             var parserResult = typeaheadParser.parse(attrs.typeahead);
             var hasFocus;
-            var scope = originalScope.$new();
-            originalScope.$on("$destroy", function() {
-                scope.$destroy();
-            });
-            var popupId = "typeahead-" + scope.$id + "-" + Math.floor(Math.random() * 1e4);
-            element.attr({
-                "aria-autocomplete": "list",
-                "aria-expanded": false,
-                "aria-owns": popupId
-            });
             var popUpEl = angular.element("<div typeahead-popup></div>");
             popUpEl.attr({
-                id: popupId,
                 matches: "matches",
                 active: "activeIdx",
                 select: "select(activeIdx)",
@@ -16389,36 +16015,27 @@ angular.module("ui.bootstrap.typeahead", [ "ui.bootstrap.position", "ui.bootstra
             if (angular.isDefined(attrs.typeaheadTemplateUrl)) {
                 popUpEl.attr("template-url", attrs.typeaheadTemplateUrl);
             }
+            var scope = originalScope.$new();
+            originalScope.$on("$destroy", function() {
+                scope.$destroy();
+            });
             var resetMatches = function() {
                 scope.matches = [];
                 scope.activeIdx = -1;
-                element.attr("aria-expanded", false);
             };
-            var getMatchId = function(index) {
-                return popupId + "-option-" + index;
-            };
-            scope.$watch("activeIdx", function(index) {
-                if (index < 0) {
-                    element.removeAttr("aria-activedescendant");
-                } else {
-                    element.attr("aria-activedescendant", getMatchId(index));
-                }
-            });
             var getMatchesAsync = function(inputValue) {
                 var locals = {
                     $viewValue: inputValue
                 };
                 isLoadingSetter(originalScope, true);
                 $q.when(parserResult.source(originalScope, locals)).then(function(matches) {
-                    var onCurrentRequest = inputValue === modelCtrl.$viewValue;
-                    if (onCurrentRequest && hasFocus) {
+                    if (inputValue === modelCtrl.$viewValue && hasFocus) {
                         if (matches.length > 0) {
                             scope.activeIdx = 0;
                             scope.matches.length = 0;
                             for (var i = 0; i < matches.length; i++) {
                                 locals[parserResult.itemName] = matches[i];
                                 scope.matches.push({
-                                    id: getMatchId(i),
                                     label: parserResult.viewMapper(scope, locals),
                                     model: matches[i]
                                 });
@@ -16426,12 +16043,9 @@ angular.module("ui.bootstrap.typeahead", [ "ui.bootstrap.position", "ui.bootstra
                             scope.query = inputValue;
                             scope.position = appendToBody ? $position.offset(element) : $position.position(element);
                             scope.position.top = scope.position.top + element.prop("offsetHeight");
-                            element.attr("aria-expanded", true);
                         } else {
                             resetMatches();
                         }
-                    }
-                    if (onCurrentRequest) {
                         isLoadingSetter(originalScope, false);
                     }
                 }, function() {
@@ -16498,9 +16112,7 @@ angular.module("ui.bootstrap.typeahead", [ "ui.bootstrap.position", "ui.bootstra
                     $label: parserResult.viewMapper(originalScope, locals)
                 });
                 resetMatches();
-                $timeout(function() {
-                    element[0].focus();
-                }, 0, false);
+                element[0].focus();
             };
             element.bind("keydown", function(evt) {
                 if (scope.matches.length === 0 || HOT_KEYS.indexOf(evt.which) === -1) {
@@ -16596,12 +16208,12 @@ angular.module("ui.bootstrap.typeahead", [ "ui.bootstrap.position", "ui.bootstra
         return queryToEscape.replace(/([.?*+^$[\]\\(){}|-])/g, "\\$1");
     }
     return function(matchItem, query) {
-        return query ? ("" + matchItem).replace(new RegExp(escapeRegexp(query), "gi"), "<strong>$&</strong>") : matchItem;
+        return query ? matchItem.replace(new RegExp(escapeRegexp(query), "gi"), "<strong>$&</strong>") : matchItem;
     };
 });
 
 angular.module("template/accordion/accordion-group.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/accordion/accordion-group.html", '<div class="panel panel-default">\n' + '  <div class="panel-heading">\n' + '    <h4 class="panel-title">\n' + '      <a class="accordion-toggle" ng-click="toggleOpen()" accordion-transclude="heading"><span ng-class="{\'text-muted\': isDisabled}">{{heading}}</span></a>\n' + "    </h4>\n" + "  </div>\n" + '  <div class="panel-collapse" collapse="!isOpen">\n' + '	  <div class="panel-body" ng-transclude></div>\n' + "  </div>\n" + "</div>");
+    $templateCache.put("template/accordion/accordion-group.html", '<div class="panel panel-default">\n' + '  <div class="panel-heading">\n' + '    <h4 class="panel-title">\n' + '      <a class="accordion-toggle" ng-click="isOpen = !isOpen" accordion-transclude="heading">{{heading}}</a>\n' + "    </h4>\n" + "  </div>\n" + '  <div class="panel-collapse" collapse="!isOpen">\n' + '	  <div class="panel-body" ng-transclude></div>\n' + "  </div>\n" + "</div>");
 } ]);
 
 angular.module("template/accordion/accordion.html", []).run([ "$templateCache", function($templateCache) {
@@ -16609,11 +16221,11 @@ angular.module("template/accordion/accordion.html", []).run([ "$templateCache", 
 } ]);
 
 angular.module("template/alert/alert.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/alert/alert.html", "<div class=\"alert\" ng-class=\"{'alert-{{type || 'warning'}}': true, 'alert-dismissable': closeable}\" role=\"alert\">\n" + '    <button ng-show="closeable" type="button" class="close" ng-click="close()">\n' + '        <span aria-hidden="true">&times;</span>\n' + '        <span class="sr-only">Close</span>\n' + "    </button>\n" + "    <div ng-transclude></div>\n" + "</div>\n" + "");
+    $templateCache.put("template/alert/alert.html", "<div class='alert' ng-class='\"alert-\" + (type || \"warning\")'>\n" + "    <button ng-show='closeable' type='button' class='close' ng-click='close()'>&times;</button>\n" + "    <div ng-transclude></div>\n" + "</div>\n" + "");
 } ]);
 
 angular.module("template/carousel/carousel.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/carousel/carousel.html", '<div ng-mouseenter="pause()" ng-mouseleave="play()" class="carousel" ng-swipe-right="prev()" ng-swipe-left="next()">\n' + '    <ol class="carousel-indicators" ng-show="slides.length > 1">\n' + '        <li ng-repeat="slide in slides track by $index" ng-class="{active: isActive(slide)}" ng-click="select(slide)"></li>\n' + "    </ol>\n" + '    <div class="carousel-inner" ng-transclude></div>\n' + '    <a class="left carousel-control" ng-click="prev()" ng-show="slides.length > 1"><span class="glyphicon glyphicon-chevron-left"></span></a>\n' + '    <a class="right carousel-control" ng-click="next()" ng-show="slides.length > 1"><span class="glyphicon glyphicon-chevron-right"></span></a>\n' + "</div>\n" + "");
+    $templateCache.put("template/carousel/carousel.html", '<div ng-mouseenter="pause()" ng-mouseleave="play()" class="carousel">\n' + '    <ol class="carousel-indicators" ng-show="slides().length > 1">\n' + '        <li ng-repeat="slide in slides()" ng-class="{active: isActive(slide)}" ng-click="select(slide)"></li>\n' + "    </ol>\n" + '    <div class="carousel-inner" ng-transclude></div>\n' + '    <a class="left carousel-control" ng-click="prev()" ng-show="slides().length > 1"><span class="icon-prev"></span></a>\n' + '    <a class="right carousel-control" ng-click="next()" ng-show="slides().length > 1"><span class="icon-next"></span></a>\n' + "</div>\n" + "");
 } ]);
 
 angular.module("template/carousel/slide.html", []).run([ "$templateCache", function($templateCache) {
@@ -16621,39 +16233,27 @@ angular.module("template/carousel/slide.html", []).run([ "$templateCache", funct
 } ]);
 
 angular.module("template/datepicker/datepicker.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/datepicker/datepicker.html", '<div ng-switch="datepickerMode" role="application" ng-keydown="keydown($event)">\n' + '  <daypicker ng-switch-when="day" tabindex="0"></daypicker>\n' + '  <monthpicker ng-switch-when="month" tabindex="0"></monthpicker>\n' + '  <yearpicker ng-switch-when="year" tabindex="0"></yearpicker>\n' + "</div>");
-} ]);
-
-angular.module("template/datepicker/day.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/datepicker/day.html", '<table role="grid" aria-labelledby="{{uniqueId}}-title" aria-activedescendant="{{activeDateId}}">\n' + "  <thead>\n" + "    <tr>\n" + '      <th><button type="button" class="btn btn-default btn-sm pull-left" ng-click="move(-1)" tabindex="-1"><i class="glyphicon glyphicon-chevron-left"></i></button></th>\n' + '      <th colspan="{{5 + showWeeks}}"><button id="{{uniqueId}}-title" role="heading" aria-live="assertive" aria-atomic="true" type="button" class="btn btn-default btn-sm" ng-click="toggleMode()" tabindex="-1" style="width:100%;"><strong>{{title}}</strong></button></th>\n' + '      <th><button type="button" class="btn btn-default btn-sm pull-right" ng-click="move(1)" tabindex="-1"><i class="glyphicon glyphicon-chevron-right"></i></button></th>\n' + "    </tr>\n" + "    <tr>\n" + '      <th ng-show="showWeeks" class="text-center"></th>\n' + '      <th ng-repeat="label in labels track by $index" class="text-center"><small aria-label="{{label.full}}">{{label.abbr}}</small></th>\n' + "    </tr>\n" + "  </thead>\n" + "  <tbody>\n" + '    <tr ng-repeat="row in rows track by $index">\n' + '      <td ng-show="showWeeks" class="text-center h6"><em>{{ weekNumbers[$index] }}</em></td>\n' + '      <td ng-repeat="dt in row track by dt.date" class="text-center" role="gridcell" id="{{dt.uid}}" aria-disabled="{{!!dt.disabled}}">\n' + '        <button type="button" style="width:100%;" class="btn btn-default btn-sm" ng-class="{\'btn-info\': dt.selected, active: isActive(dt)}" ng-click="select(dt.date)" ng-disabled="dt.disabled" tabindex="-1"><span ng-class="{\'text-muted\': dt.secondary, \'text-info\': dt.current}">{{dt.label}}</span></button>\n' + "      </td>\n" + "    </tr>\n" + "  </tbody>\n" + "</table>\n" + "");
-} ]);
-
-angular.module("template/datepicker/month.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/datepicker/month.html", '<table role="grid" aria-labelledby="{{uniqueId}}-title" aria-activedescendant="{{activeDateId}}">\n' + "  <thead>\n" + "    <tr>\n" + '      <th><button type="button" class="btn btn-default btn-sm pull-left" ng-click="move(-1)" tabindex="-1"><i class="glyphicon glyphicon-chevron-left"></i></button></th>\n' + '      <th><button id="{{uniqueId}}-title" role="heading" aria-live="assertive" aria-atomic="true" type="button" class="btn btn-default btn-sm" ng-click="toggleMode()" tabindex="-1" style="width:100%;"><strong>{{title}}</strong></button></th>\n' + '      <th><button type="button" class="btn btn-default btn-sm pull-right" ng-click="move(1)" tabindex="-1"><i class="glyphicon glyphicon-chevron-right"></i></button></th>\n' + "    </tr>\n" + "  </thead>\n" + "  <tbody>\n" + '    <tr ng-repeat="row in rows track by $index">\n' + '      <td ng-repeat="dt in row track by dt.date" class="text-center" role="gridcell" id="{{dt.uid}}" aria-disabled="{{!!dt.disabled}}">\n' + '        <button type="button" style="width:100%;" class="btn btn-default" ng-class="{\'btn-info\': dt.selected, active: isActive(dt)}" ng-click="select(dt.date)" ng-disabled="dt.disabled" tabindex="-1"><span ng-class="{\'text-info\': dt.current}">{{dt.label}}</span></button>\n' + "      </td>\n" + "    </tr>\n" + "  </tbody>\n" + "</table>\n" + "");
+    $templateCache.put("template/datepicker/datepicker.html", "<table>\n" + "  <thead>\n" + "    <tr>\n" + '      <th><button type="button" class="btn btn-default btn-sm pull-left" ng-click="move(-1)"><i class="glyphicon glyphicon-chevron-left"></i></button></th>\n' + '      <th colspan="{{rows[0].length - 2 + showWeekNumbers}}"><button type="button" class="btn btn-default btn-sm btn-block" ng-click="toggleMode()"><strong>{{title}}</strong></button></th>\n' + '      <th><button type="button" class="btn btn-default btn-sm pull-right" ng-click="move(1)"><i class="glyphicon glyphicon-chevron-right"></i></button></th>\n' + "    </tr>\n" + '    <tr ng-show="labels.length > 0" class="h6">\n' + '      <th ng-show="showWeekNumbers" class="text-center">#</th>\n' + '      <th ng-repeat="label in labels" class="text-center">{{label}}</th>\n' + "    </tr>\n" + "  </thead>\n" + "  <tbody>\n" + '    <tr ng-repeat="row in rows">\n' + '      <td ng-show="showWeekNumbers" class="text-center"><em>{{ getWeekNumber(row) }}</em></td>\n' + '      <td ng-repeat="dt in row" class="text-center">\n' + '        <button type="button" style="width:100%;" class="btn btn-default btn-sm" ng-class="{\'btn-info\': dt.selected}" ng-click="select(dt.date)" ng-disabled="dt.disabled"><span ng-class="{\'text-muted\': dt.secondary}">{{dt.label}}</span></button>\n' + "      </td>\n" + "    </tr>\n" + "  </tbody>\n" + "</table>\n" + "");
 } ]);
 
 angular.module("template/datepicker/popup.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/datepicker/popup.html", "<ul class=\"dropdown-menu\" ng-style=\"{display: (isOpen && 'block') || 'none', top: position.top+'px', left: position.left+'px'}\" ng-keydown=\"keydown($event)\">\n" + "	<li ng-transclude></li>\n" + '	<li ng-if="showButtonBar" style="padding:10px 9px 2px">\n' + '		<span class="btn-group">\n' + '			<button type="button" class="btn btn-sm btn-info" ng-click="select(\'today\')">{{ getText(\'current\') }}</button>\n' + '			<button type="button" class="btn btn-sm btn-danger" ng-click="select(null)">{{ getText(\'clear\') }}</button>\n' + "		</span>\n" + '		<button type="button" class="btn btn-sm btn-success pull-right" ng-click="close()">{{ getText(\'close\') }}</button>\n' + "	</li>\n" + "</ul>\n" + "");
-} ]);
-
-angular.module("template/datepicker/year.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/datepicker/year.html", '<table role="grid" aria-labelledby="{{uniqueId}}-title" aria-activedescendant="{{activeDateId}}">\n' + "  <thead>\n" + "    <tr>\n" + '      <th><button type="button" class="btn btn-default btn-sm pull-left" ng-click="move(-1)" tabindex="-1"><i class="glyphicon glyphicon-chevron-left"></i></button></th>\n' + '      <th colspan="3"><button id="{{uniqueId}}-title" role="heading" aria-live="assertive" aria-atomic="true" type="button" class="btn btn-default btn-sm" ng-click="toggleMode()" tabindex="-1" style="width:100%;"><strong>{{title}}</strong></button></th>\n' + '      <th><button type="button" class="btn btn-default btn-sm pull-right" ng-click="move(1)" tabindex="-1"><i class="glyphicon glyphicon-chevron-right"></i></button></th>\n' + "    </tr>\n" + "  </thead>\n" + "  <tbody>\n" + '    <tr ng-repeat="row in rows track by $index">\n' + '      <td ng-repeat="dt in row track by dt.date" class="text-center" role="gridcell" id="{{dt.uid}}" aria-disabled="{{!!dt.disabled}}">\n' + '        <button type="button" style="width:100%;" class="btn btn-default" ng-class="{\'btn-info\': dt.selected, active: isActive(dt)}" ng-click="select(dt.date)" ng-disabled="dt.disabled" tabindex="-1"><span ng-class="{\'text-info\': dt.current}">{{dt.label}}</span></button>\n' + "      </td>\n" + "    </tr>\n" + "  </tbody>\n" + "</table>\n" + "");
+    $templateCache.put("template/datepicker/popup.html", "<ul class=\"dropdown-menu\" ng-style=\"{display: (isOpen && 'block') || 'none', top: position.top+'px', left: position.left+'px'}\">\n" + "	<li ng-transclude></li>\n" + '	<li ng-show="showButtonBar" style="padding:10px 9px 2px">\n' + '		<span class="btn-group">\n' + '			<button type="button" class="btn btn-sm btn-info" ng-click="today()">{{currentText}}</button>\n' + '			<button type="button" class="btn btn-sm btn-default" ng-click="showWeeks = ! showWeeks" ng-class="{active: showWeeks}">{{toggleWeeksText}}</button>\n' + '			<button type="button" class="btn btn-sm btn-danger" ng-click="clear()">{{clearText}}</button>\n' + "		</span>\n" + '		<button type="button" class="btn btn-sm btn-success pull-right" ng-click="isOpen = false">{{closeText}}</button>\n' + "	</li>\n" + "</ul>\n" + "");
 } ]);
 
 angular.module("template/modal/backdrop.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/modal/backdrop.html", '<div class="modal-backdrop fade"\n' + '     ng-class="{in: animate}"\n' + "     ng-style=\"{'z-index': 1040 + (index && 1 || 0) + index*10}\"\n" + "></div>\n" + "");
+    $templateCache.put("template/modal/backdrop.html", '<div class="modal-backdrop fade" ng-class="{in: animate}" ng-style="{\'z-index\': 1040 + index*10}"></div>');
 } ]);
 
 angular.module("template/modal/window.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/modal/window.html", '<div tabindex="-1" role="dialog" class="modal fade" ng-class="{in: animate}" ng-style="{\'z-index\': 1050 + index*10, display: \'block\'}" ng-click="close($event)">\n' + "    <div class=\"modal-dialog\" ng-class=\"{'modal-sm': size == 'sm', 'modal-lg': size == 'lg'}\"><div class=\"modal-content\" ng-transclude></div></div>\n" + "</div>");
+    $templateCache.put("template/modal/window.html", '<div tabindex="-1" class="modal fade {{ windowClass }}" ng-class="{in: animate}" ng-style="{\'z-index\': 1050 + index*10, display: \'block\'}" ng-click="close($event)">\n' + '    <div class="modal-dialog"><div class="modal-content" ng-transclude></div></div>\n' + "</div>");
 } ]);
 
 angular.module("template/pagination/pager.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/pagination/pager.html", '<ul class="pager">\n' + '  <li ng-class="{disabled: noPrevious(), previous: align}"><a href ng-click="selectPage(page - 1)">{{getText(\'previous\')}}</a></li>\n' + '  <li ng-class="{disabled: noNext(), next: align}"><a href ng-click="selectPage(page + 1)">{{getText(\'next\')}}</a></li>\n' + "</ul>");
+    $templateCache.put("template/pagination/pager.html", '<ul class="pager">\n' + '  <li ng-repeat="page in pages" ng-class="{disabled: page.disabled, previous: page.previous, next: page.next}"><a ng-click="selectPage(page.number)">{{page.text}}</a></li>\n' + "</ul>");
 } ]);
 
 angular.module("template/pagination/pagination.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/pagination/pagination.html", '<ul class="pagination">\n' + '  <li ng-if="boundaryLinks" ng-class="{disabled: noPrevious()}"><a href ng-click="selectPage(1)">{{getText(\'first\')}}</a></li>\n' + '  <li ng-if="directionLinks" ng-class="{disabled: noPrevious()}"><a href ng-click="selectPage(page - 1)">{{getText(\'previous\')}}</a></li>\n' + '  <li ng-repeat="page in pages track by $index" ng-class="{active: page.active}"><a href ng-click="selectPage(page.number)">{{page.text}}</a></li>\n' + '  <li ng-if="directionLinks" ng-class="{disabled: noNext()}"><a href ng-click="selectPage(page + 1)">{{getText(\'next\')}}</a></li>\n' + '  <li ng-if="boundaryLinks" ng-class="{disabled: noNext()}"><a href ng-click="selectPage(totalPages)">{{getText(\'last\')}}</a></li>\n' + "</ul>");
+    $templateCache.put("template/pagination/pagination.html", '<ul class="pagination">\n' + '  <li ng-repeat="page in pages" ng-class="{active: page.active, disabled: page.disabled}"><a ng-click="selectPage(page.number)">{{page.text}}</a></li>\n' + "</ul>");
 } ]);
 
 angular.module("template/tooltip/tooltip-html-unsafe-popup.html", []).run([ "$templateCache", function($templateCache) {
@@ -16669,7 +16269,7 @@ angular.module("template/popover/popover.html", []).run([ "$templateCache", func
 } ]);
 
 angular.module("template/progressbar/bar.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/progressbar/bar.html", '<div class="progress-bar" ng-class="type && \'progress-bar-\' + type" role="progressbar" aria-valuenow="{{value}}" aria-valuemin="0" aria-valuemax="{{max}}" ng-style="{width: percent + \'%\'}" aria-valuetext="{{percent | number:0}}%" ng-transclude></div>');
+    $templateCache.put("template/progressbar/bar.html", '<div class="progress-bar" ng-class="type && \'progress-bar-\' + type" ng-transclude></div>');
 } ]);
 
 angular.module("template/progressbar/progress.html", []).run([ "$templateCache", function($templateCache) {
@@ -16677,11 +16277,11 @@ angular.module("template/progressbar/progress.html", []).run([ "$templateCache",
 } ]);
 
 angular.module("template/progressbar/progressbar.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/progressbar/progressbar.html", '<div class="progress">\n' + '  <div class="progress-bar" ng-class="type && \'progress-bar-\' + type" role="progressbar" aria-valuenow="{{value}}" aria-valuemin="0" aria-valuemax="{{max}}" ng-style="{width: percent + \'%\'}" aria-valuetext="{{percent | number:0}}%" ng-transclude></div>\n' + "</div>");
+    $templateCache.put("template/progressbar/progressbar.html", '<div class="progress"><div class="progress-bar" ng-class="type && \'progress-bar-\' + type" ng-transclude></div></div>');
 } ]);
 
 angular.module("template/rating/rating.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/rating/rating.html", '<span ng-mouseleave="reset()" ng-keydown="onKeydown($event)" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="{{range.length}}" aria-valuenow="{{value}}">\n' + '    <i ng-repeat="r in range track by $index" ng-mouseenter="enter($index + 1)" ng-click="rate($index + 1)" class="glyphicon" ng-class="$index < value && (r.stateOn || \'glyphicon-star\') || (r.stateOff || \'glyphicon-star-empty\')">\n' + "        <span class=\"sr-only\">({{ $index < value ? '*' : ' ' }})</span>\n" + "    </i>\n" + "</span>");
+    $templateCache.put("template/rating/rating.html", '<span ng-mouseleave="reset()">\n' + '    <i ng-repeat="r in range" ng-mouseenter="enter($index + 1)" ng-click="rate($index + 1)" class="glyphicon" ng-class="$index < val && (r.stateOn || \'glyphicon-star\') || (r.stateOff || \'glyphicon-star-empty\')"></i>\n' + "</span>");
 } ]);
 
 angular.module("template/tabs/tab.html", []).run([ "$templateCache", function($templateCache) {
@@ -16693,7 +16293,7 @@ angular.module("template/tabs/tabset-titles.html", []).run([ "$templateCache", f
 } ]);
 
 angular.module("template/tabs/tabset.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/tabs/tabset.html", "\n" + "<div>\n" + "  <ul class=\"nav nav-{{type || 'tabs'}}\" ng-class=\"{'nav-stacked': vertical, 'nav-justified': justified}\" ng-transclude></ul>\n" + '  <div class="tab-content">\n' + '    <div class="tab-pane" \n' + '         ng-repeat="tab in tabs" \n' + '         ng-class="{active: tab.active}"\n' + '         tab-content-transclude="tab">\n' + "    </div>\n" + "  </div>\n" + "</div>\n" + "");
+    $templateCache.put("template/tabs/tabset.html", "\n" + '<div class="tabbable">\n' + "  <ul class=\"nav {{type && 'nav-' + type}}\" ng-class=\"{'nav-stacked': vertical, 'nav-justified': justified}\" ng-transclude></ul>\n" + '  <div class="tab-content">\n' + '    <div class="tab-pane" \n' + '         ng-repeat="tab in tabs" \n' + '         ng-class="{active: tab.active}"\n' + '         tab-content-transclude="tab">\n' + "    </div>\n" + "  </div>\n" + "</div>\n" + "");
 } ]);
 
 angular.module("template/timepicker/timepicker.html", []).run([ "$templateCache", function($templateCache) {
@@ -16705,7 +16305,7 @@ angular.module("template/typeahead/typeahead-match.html", []).run([ "$templateCa
 } ]);
 
 angular.module("template/typeahead/typeahead-popup.html", []).run([ "$templateCache", function($templateCache) {
-    $templateCache.put("template/typeahead/typeahead-popup.html", '<ul class="dropdown-menu" ng-if="isOpen()" ng-style="{top: position.top+\'px\', left: position.left+\'px\'}" style="display: block;" role="listbox" aria-hidden="{{!isOpen()}}">\n' + '    <li ng-repeat="match in matches track by $index" ng-class="{active: isActive($index) }" ng-mouseenter="selectActive($index)" ng-click="selectMatch($index)" role="option" id="{{match.id}}">\n' + '        <div typeahead-match index="$index" match="match" query="query" template-url="templateUrl"></div>\n' + "    </li>\n" + "</ul>");
+    $templateCache.put("template/typeahead/typeahead-popup.html", "<ul class=\"dropdown-menu\" ng-style=\"{display: isOpen()&&'block' || 'none', top: position.top+'px', left: position.left+'px'}\">\n" + '    <li ng-repeat="match in matches" ng-class="{active: isActive($index) }" ng-mouseenter="selectActive($index)" ng-click="selectMatch($index)">\n' + '        <div typeahead-match index="$index" match="match" query="query" template-url="templateUrl"></div>\n' + "    </li>\n" + "</ul>");
 } ]);
 
 (function($) {

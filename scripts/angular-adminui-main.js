@@ -65,7 +65,12 @@ angular.module("ntd.directives").config([ "adminuiFrameProvider", function(admin
                 url: "#/widget",
                 children: [ {
                     name: "Admin UI组件",
+                    params: {
+                        id: "@id",
+                        aid: "@aaa"
+                    },
                     url: "#/widget",
+                    match: "/widget*",
                     children: null
                 }, {
                     name: "Bootstrap组件",
