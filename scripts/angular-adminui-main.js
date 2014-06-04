@@ -207,6 +207,34 @@ adminuiApp.controller("MainCtrl", [ "$scope", "$window", "$location", function($
     $scope.alert = {};
 } ]);
 
+var DatePickerCtrl = function($scope) {};
+
+adminuiApp.controller("DatePickerCtrl", [ "$scope", DatePickerCtrl ]);
+
+var DateRangePickerCtrl = function($scope) {
+    $scope.myDateRange = {
+        startDate: moment("2014-04-20"),
+        endDate: moment("2014-05-25")
+    };
+    $scope.ranges = {
+        Today: [ moment(), moment() ],
+        Yesterday: [ moment().subtract("days", 1), moment().subtract("days", 1) ],
+        "Last 7 days": [ moment().subtract("days", 7), moment() ],
+        "Last 30 days": [ moment().subtract("days", 30), moment() ],
+        "This month": [ moment().startOf("month"), moment().endOf("month") ]
+    };
+    $scope.locale = {
+        applyLabel: "应用",
+        cancelLabel: "取消",
+        fromLabel: "从",
+        toLabel: "到",
+        weekLabel: "周",
+        customRangeLabel: "预定义区间"
+    };
+};
+
+adminuiApp.controller("DateRangePickerCtrl", [ "$scope", DateRangePickerCtrl ]);
+
 var ListCtrl = function($scope) {
     $scope.change = function() {
         console.log("changed");
