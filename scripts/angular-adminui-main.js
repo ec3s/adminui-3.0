@@ -364,6 +364,7 @@ paginationCtrl.prototype.changeTotalPage = function($scope, $location) {
 adminuiApp.controller("paginationCtrl", [ "$scope", "$route", "$location", paginationCtrl ]);
 
 var chosenCtrl = function($scope, $http, $q) {
+    $scope.isShow = false;
     $scope.options = this.getOptions();
     $scope.optionPromise = angular.bind(this, this.getOptionPromise, $http, $q);
     $scope.tags = [ {
@@ -389,6 +390,9 @@ var chosenCtrl = function($scope, $http, $q) {
             } ]
         } ]
     } ];
+    $scope.show = function() {
+        $scope.isShow = !$scope.isShow;
+    };
 };
 
 chosenCtrl.prototype.getOptionPromise = function($http, $q, search) {
