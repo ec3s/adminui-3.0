@@ -397,11 +397,44 @@ var chosenCtrl = function($scope, $http, $q) {
 
 chosenCtrl.prototype.getOptionPromise = function($http, $q, search) {
     var deferred = $q.defer();
-    $http.jsonp("http://api.rottentomatoes.com/api/public/v1.0/movies.json?q=" + search + "&apikey=ju6z9mjyajq2djue3gbvv26t&page_limit=10&page=1" + "&callback=JSON_CALLBACK").success(function(data) {
-        deferred.resolve(data.movies);
-    }).error(function(error) {
-        deferred.reject(error);
+    var data = {
+        movies: [ {
+            title: "1",
+            name: "CN",
+            id: "a"
+        }, {
+            title: "11",
+            name: "CNaa",
+            id: "b"
+        }, {
+            title: "111",
+            name: "CNaas",
+            id: "c"
+        }, {
+            title: "2",
+            name: "JP",
+            id: "d"
+        }, {
+            title: "3",
+            name: "EN",
+            id: "e"
+        }, {
+            title: "4",
+            name: "AU",
+            id: "f"
+        }, {
+            title: "5",
+            name: "DE",
+            id: "g"
+        } ]
+    };
+    var currentArray = [];
+    angular.forEach(data.movies, function(value) {
+        if (value.title.match(search) && search !== "") {
+            currentArray.push(value);
+        }
     });
+    deferred.resolve(currentArray);
     return deferred.promise;
 };
 
