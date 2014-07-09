@@ -76,6 +76,10 @@ angular.module("ntd.directives").config([ "adminuiFrameProvider", function(admin
                     name: "Bootstrap组件",
                     url: "#/bootstrap-ui-widget",
                     children: null
+                }, {
+                    name: "timeLine组件",
+                    url: "#/time-line",
+                    children: null
                 } ]
             }, {
                 name: "其他页面",
@@ -137,6 +141,9 @@ adminuiApp.config([ "$routeProvider", function($routeProvider) {
         controller: "MainCtrl"
     }).when("/update-guide", {
         templateUrl: "views/update_guide.html",
+        controller: "MainCtrl"
+    }).when("/time-line", {
+        templateUrl: "views/time-line.html",
         controller: "MainCtrl"
     }).otherwise({
         redirectTo: "/"
@@ -1033,3 +1040,47 @@ var TimepickerDemoCtrl = function($scope) {
 };
 
 adminuiApp.controller("TimepickerDemoCtrl", [ "$scope", TimepickerDemoCtrl ]);
+
+var TimeLineDemoCtrl = function($scope, $filter) {
+    var initData = {
+        user: {
+            name: "",
+            avator: "images/avatar.jpg"
+        },
+        time: "",
+        title: "",
+        content: {
+            list: [ 1, 2, 3, 4, 5 ]
+        },
+        template: "<div><ul><li data-ng-repeat='item in list'>{{item}}" + "<a href='http://www.baidu.com'>点击我</a></li></ul></div>"
+    };
+    $scope.timeLineDemoData = [];
+    var tempTimeLineData = [];
+    for (var i = 0; i < 5; i++) {
+        var currentInitData = angular.copy(initData);
+        currentInitData.user.name = "john" + i;
+        var t = new Date();
+        currentInitData.time = new Date(t.setDate(t.getDate() - i));
+        currentInitData.title = "title" + i;
+        var currentInitDataCopy = angular.copy(currentInitData);
+        tempTimeLineData.push(angular.copy(currentInitData));
+        tempTimeLineData.push(angular.copy(currentInitDataCopy));
+    }
+    tempTimeLineData = $filter("orderBy")(tempTimeLineData, [ "-time" ]);
+    var currentObj = {};
+    tempTimeLineData.forEach(function(value, index) {
+        var currentTime = $filter("date")(value.time, "yyyy-MM-dd");
+        if (!currentObj || currentObj.currentTime !== currentTime) {
+            currentObj = {
+                currentObj: []
+            };
+            currentObj.currentTime = angular.copy(currentTime);
+            currentObj.currentObj.push(angular.copy(value));
+            $scope.timeLineDemoData.push(currentObj);
+        } else {
+            currentObj.currentObj.push(angular.copy(value));
+        }
+    });
+};
+
+adminuiApp.controller("TimepickerDemoCtrl", [ "$scope", "$filter", TimeLineDemoCtrl ]);
