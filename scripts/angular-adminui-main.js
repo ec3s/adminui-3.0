@@ -1,6 +1,6 @@
 "use strict";
 
-var adminuiApp = angular.module("adminuiApp", [ "ngRoute", "ntd.services", "ntd.directives", "ui.bootstrap", "fiestah.money", "money", "bootstrapPrettify" ]);
+var adminuiApp = angular.module("adminuiApp", [ "ngRoute", "ntd.services", "ntd.directives", "ui.bootstrap", "bootstrapPrettify" ]);
 
 adminuiApp.run([ "$rootScope", function($rootScope) {
     $rootScope.userInfo = {
