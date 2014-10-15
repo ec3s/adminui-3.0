@@ -160,12 +160,6 @@ adminuiApp.config([ "$routeProvider", function($routeProvider) {
     });
 } ]);
 
-$(".editr").each(function() {
-    new Editr({
-        el: this
-    });
-});
-
 "use strict";
 
 adminuiApp.controller("MainCtrl", [ "$scope", "$window", "$location", "$filter", function($scope, $window, $location, $filter) {
