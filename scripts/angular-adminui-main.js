@@ -83,6 +83,10 @@ angular.module("ntd.directives").config([ "adminuiFrameProvider", function(admin
                     name: "timeLine组件",
                     url: "#/time-line",
                     children: null
+                }, {
+                    name: "ECharts组件",
+                    url: "#/eCharts",
+                    children: null
                 } ]
             }, {
                 name: "其他页面",
@@ -147,6 +151,9 @@ adminuiApp.config([ "$routeProvider", function($routeProvider) {
         controller: "MainCtrl"
     }).when("/time-line", {
         templateUrl: "views/time-line.html",
+        controller: "MainCtrl"
+    }).when("/eCharts", {
+        templateUrl: "views/eCharts.html",
         controller: "MainCtrl"
     }).otherwise({
         redirectTo: "/"
@@ -1077,3 +1084,251 @@ var TimepickerDemoCtrl = function($scope) {
         $scope.mytime = null;
     };
 };
+
+var pageload = {
+    name: "page.load",
+    dataPoints: [ {
+        x: 2001,
+        y: 12
+    }, {
+        x: 2002,
+        y: 23
+    }, {
+        x: 2003,
+        y: 45
+    }, {
+        x: 2004,
+        y: 62
+    }, {
+        x: 2005,
+        y: 32
+    }, {
+        x: 2006,
+        y: 40
+    }, {
+        x: 2007,
+        y: 23
+    }, {
+        x: 2008,
+        y: 90
+    }, {
+        x: 2009,
+        y: 12
+    }, {
+        x: 2010,
+        y: 31
+    } ]
+};
+
+var firstPaint = {
+    name: "page.firstPaint",
+    dataPoints: [ {
+        x: 2001,
+        y: 22
+    }, {
+        x: 2002,
+        y: 13
+    }, {
+        x: 2003,
+        y: 35
+    }, {
+        x: 2004,
+        y: 52
+    }, {
+        x: 2005,
+        y: 32
+    }, {
+        x: 2006,
+        y: 40
+    }, {
+        x: 2007,
+        y: 63
+    }, {
+        x: 2008,
+        y: 80
+    }, {
+        x: 2009,
+        y: 20
+    }, {
+        x: 2010,
+        y: 25
+    } ]
+};
+
+var app = adminuiApp;
+
+app.controller("LineChartController", function($scope) {
+    $scope.config = {
+        title: "Line Chart",
+        subtitle: "Line Chart Subtitle",
+        width: 800,
+        height: 400,
+        autoResize: true
+    };
+    $scope.data = [ pageload ];
+    $scope.multiple = [ pageload, firstPaint ];
+});
+
+app.controller("BarChartController", function($scope) {
+    $scope.config = {
+        title: "Bar Chart",
+        subtitle: "Bar Chart Subtitle",
+        stack: true,
+        width: 800,
+        height: 400,
+        autoResize: true
+    };
+    $scope.data = [ pageload ];
+    $scope.multiple = [ pageload, firstPaint ];
+});
+
+app.controller("AreaChartController", function($scope) {
+    $scope.config = {
+        title: "Area Chart",
+        subtitle: "Area Chart Subtitle",
+        width: 800,
+        height: 400,
+        autoResize: true
+    };
+    $scope.data = [ pageload ];
+    $scope.multiple = [ pageload, firstPaint ];
+});
+
+app.controller("PieChartController", function($scope) {
+    $scope.config = {
+        title: "Pie Chart",
+        subtitle: "Pie Chart Subtitle",
+        width: 800,
+        height: 400,
+        calculable: true,
+        autoResize: true
+    };
+    $scope.data = [ firstPaint ];
+});
+
+app.controller("GaugeChartController", function($scope) {
+    $scope.config = {
+        width: 800,
+        height: 400,
+        autoResize: true
+    };
+    $scope.data = [ pageload ];
+});
+
+app.controller("AjaxChartController", function($scope, $interval) {
+    $scope.config = {
+        width: 800,
+        height: 400
+    };
+    $scope.data = [ pageload ];
+    $interval(function() {}, 6e4);
+});
+
+app.controller("bubbleChartController", function($scope) {
+    function random() {
+        var r = Math.round(Math.random() * 100);
+        return r * (r % 2 == 0 ? 1 : -1);
+    }
+    function randomDataArray() {
+        var d = [];
+        var len = 100;
+        while (len--) {
+            d.push([ random(), random(), Math.abs(random()) ]);
+        }
+        return d;
+    }
+    $scope.config = {
+        width: 800,
+        height: 400,
+        autoResize: true,
+        title: {
+            text: "标准气泡图",
+            subtext: "toolBox的dataZoom支持"
+        },
+        series: [ {
+            name: "scatter1",
+            data: randomDataArray()
+        }, {
+            name: "scatter2",
+            data: randomDataArray()
+        } ]
+    };
+    $scope.data = $scope.config.series;
+});
+
+app.controller("scatterChartController", function($scope) {
+    $scope.config = {
+        width: 800,
+        height: 400,
+        title: {
+            text: "类目坐标散点图",
+            subtext: "dataZoom支持"
+        },
+        autoResize: true,
+        series: [ {
+            name: "series1",
+            data: function() {
+                var d = [];
+                var len = 0;
+                var value;
+                while (len++ < 500) {
+                    d.push([ len, (Math.random() * 30).toFixed(2) - 0, (Math.random() * 100).toFixed(2) - 0 ]);
+                }
+                return d;
+            }()
+        }, {
+            name: "series2",
+            data: function() {
+                var d = [];
+                var len = 0;
+                var value;
+                while (len++ < 500) {
+                    d.push([ len, (Math.random() * 30).toFixed(2) - 0, (Math.random() * 100).toFixed(2) - 0 ]);
+                }
+                return d;
+            }()
+        } ]
+    };
+    $scope.data = $scope.config.series;
+});
+
+app.controller("radarChartController", function($scope) {
+    $scope.config = {
+        width: 800,
+        height: 400,
+        autoResize: true,
+        title: {
+            text: "预算 vs 开销（Budget vs spending）",
+            subtext: "纯属虚构"
+        }
+    };
+    $scope.data = [ {
+        name: "预算 vs 开销（Budget vs spending）",
+        data: [ {
+            value: [ 4300, 1e4, 28e3, 35e3, 5e4, 19e3 ],
+            name: "预算分配（Allocated Budget）"
+        }, {
+            value: [ 5e3, 14e3, 28e3, 31e3, 42e3, 21e3 ],
+            name: "实际开销（Actual Spending）"
+        } ],
+        indicator: [ {
+            text: "销售（sales）",
+            max: 6e3
+        }, {
+            text: "管理（Administration）",
+            max: 16e3
+        }, {
+            text: "信息技术（Information Techology）",
+            max: 3e4
+        }, {
+            text: "客服（Customer Support）",
+            max: 38e3
+        }, {
+            text: "研发（Development）",
+            max: 52e3
+        }, {
+            text: "市场（Marketing）",
+            max: 25e3
+        } ]
+    } ];
+});
