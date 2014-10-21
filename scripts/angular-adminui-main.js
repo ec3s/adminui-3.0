@@ -965,7 +965,7 @@ var ModalDemoCtrl = function($scope, $modal, $log) {
     $scope.items = [ "item1", "item2", "item3" ];
     $scope.open2 = function() {
         var modalInstance = $modal.open({
-            template: t,
+            templateUrl: "myModalContent.html",
             controller: "ModalInstanceCtrl",
             loader: false,
             resolve: {
@@ -982,7 +982,7 @@ var ModalDemoCtrl = function($scope, $modal, $log) {
     };
     $scope.open = function() {
         var modalInstance = $modal.open({
-            template: t,
+            templateUrl: "myModalContent.html",
             controller: "ModalInstanceCtrl",
             resolve: {
                 items: [ "$q", function($q) {
