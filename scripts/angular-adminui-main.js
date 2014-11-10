@@ -228,7 +228,7 @@ adminuiApp.controller("MainCtrl", [ "$scope", "$window", "$location", "$filter",
             avator: "images/avatar.jpg"
         },
         time: "",
-        title: "",
+        sortBy: "",
         content: {
             list: [ 1, 2, 3, 4, 5 ]
         },
@@ -245,6 +245,7 @@ adminuiApp.controller("MainCtrl", [ "$scope", "$window", "$location", "$filter",
         }
         var t = new Date();
         currentInitData.time = new Date(t.setDate(t.getDate() - i));
+        currentInitData.sortBy = currentInitData.time;
         currentInitData.title = "title" + i;
         var currentInitDataCopy = angular.copy(currentInitData);
         tempTimeLineData.push(angular.copy(currentInitData));
